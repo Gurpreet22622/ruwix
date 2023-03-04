@@ -1,0 +1,4 @@
+{:paths ["src" "dev" ]
+ :deps {
+        criterium/criterium  {:mvn/version "0.4.6"}
+        com.hyperfiddle/rcf {:mvn/version "20220926-202227"}}}
