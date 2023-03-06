@@ -4,7 +4,6 @@
   [color]
   (into [] ( repeat 3 (into [] (repeat 3 color))) ))
 
-(make-face :a)
 
 (defn init-cube
   []
@@ -16,7 +15,7 @@
                      :down :f}]
     (update-vals face->color make-face)))
 
-(def start (init-cube))
+(def solved (init-cube))
 
 (defn rotate-clockwise
   [face]
@@ -140,6 +139,49 @@
                :front n-front))))
 
 
+(defn apply-B
+  [{:keys [back up down left right] :as   cb}]
+  (let [n-up    (assoc up 0 (map last right))
+        [f s t] (first up)
+        n-left  (-> left
+                    (assoc-in [2 0] f)
+                    (assoc-in [1 0] s)
+                    (assoc-in [0 0] t))
+        n-down  (assoc down 2 (map first left))
+        [f s t] (last down)
+        n-right (-> right
+                    (assoc-in [2 2] f)
+                    (assoc-in [1 2] s)
+                    (assoc-in [0 2] t))]
+    (-> cb
+        (assoc :back (rotate-clockwise back)
+               :up   n-up
+               :left n-left
+               :down n-down
+               :right n-right))))
+
+
+(defn rot-cb-left
+  [{:keys [front back left right up down] :as cb}]
+   (-> cb
+       (assoc :up (rotate-clockwise up)
+              :down (nth (iterate rotate-clockwise down) 3)
+              :front right
+              :left front
+              :back left 
+              :right back)))
+
+
+(defn rot-cb-up
+  [{:keys [front back left right up down] :as cb}]
+   (-> cb
+       (assoc :up front
+              :front down
+              :back (reverse (map reverse up))
+              :down (reverse (map reverse back))
+              :right (rotate-clockwise right)
+              :left (nth (iterate rotate-clockwise left) 3))))
+
 (defn apply-n
   [move-fn n]
   (fn [cb]
@@ -156,6 +198,8 @@
 
 (def apply-L' (apply-n apply-L 3))
 
+(def apply-B' (apply-n apply-B 3))
+
 
 (def moves->movefn
   {:F  apply-F
@@ -167,7 +211,11 @@
    :D  apply-D
    :D' apply-D'
    :R  apply-R
-   :R' apply-R'})
+   :R' apply-R'
+   :B  apply-B
+   :B' apply-B'
+   :CL rot-cb-left
+   :CU rot-cb-up})
 
 
 (defn apply-moves
@@ -176,9 +224,9 @@
             ((get moves->movefn move) cube)) 
           cb moves))
 
-(apply-moves start [:F :R :L :F' :R'])
 
 (tests 
  (doseq [[_ move-fn] moves->movefn]
-   (nth (iterate move-fn start) 4) := start)
+   (nth (iterate move-fn solved) 4) := solved)
+ 
  nil)
