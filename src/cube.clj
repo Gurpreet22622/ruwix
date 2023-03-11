@@ -1,11 +1,11 @@
 (ns cube
   (:require [hyperfiddle.rcf :refer [tests]]))
-(defn make-face
+(defn- make-face
   [color]
   (into [] ( repeat 3 (into [] (repeat 3 color))) ))
 
 
-(defn init-cube
+(defn- init-cube
   []
   (let [face->color {:front :a
                      :back :b
@@ -15,9 +15,10 @@
                      :down :f}]
     (update-vals face->color make-face)))
 
+
 (def solved (init-cube))
 
-(defn rotate-clockwise
+(defn- rotate-clockwise
   [face]
   (let [fst (into [] (reverse (map first face)))
         snd (into [] (reverse (map second face)))
@@ -25,7 +26,11 @@
     [fst snd lst]))
 
 (tests
- (rotate-clockwise [[:a :b :c] [:d :e :f] [:g :h :i]]) := [[:g :d :a] [:h :e :b] [:i :f :c]]
+ (rotate-clockwise [[:a :b :c] 
+                    [:d :e :f] 
+                    [:g :h :i]]) := [[:g :d :a] 
+                                     [:h :e :b] 
+                                     [:i :f :c]]
  )
 
 
@@ -71,15 +76,16 @@
 
 (defn apply-D
   [{:keys [front back left right down] :as cb}]
-  (let [n-right (assoc right 2 (nth back 2))
-        n-left  (assoc left 2  (nth front 2))
-        n-front (assoc front 2 (nth right 2))
-        n-back  (assoc back 2  (nth left 2))]
+  (let [n-right (assoc right 2 (nth front 2))
+        n-left  (assoc left 2  (nth back 2))
+        n-front (assoc front 2 (nth left 2))
+        n-back  (assoc back 2  (nth right 2))]
     (assoc cb  :down (rotate-clockwise down)
                :right n-right
                :left n-left
                :front n-front
                :back n-back)))
+
 
 (defn apply-R
   [{:keys [front back right up down]
@@ -141,13 +147,13 @@
 
 (defn apply-B
   [{:keys [back up down left right] :as   cb}]
-  (let [n-up    (assoc up 0 (map last right))
+  (let [n-up    (assoc up 0 (mapv last right))
         [f s t] (first up)
         n-left  (-> left
                     (assoc-in [2 0] f)
                     (assoc-in [1 0] s)
                     (assoc-in [0 0] t))
-        n-down  (assoc down 2 (map first left))
+        n-down  (assoc down 2 (mapv first left))
         [f s t] (last down)
         n-right (-> right
                     (assoc-in [2 2] f)
@@ -161,7 +167,7 @@
                :right n-right))))
 
 
-(defn rot-cb-left
+(defn- rot-cb-left
   [{:keys [front back left right up down] :as cb}]
    (-> cb
        (assoc :up (rotate-clockwise up)
@@ -172,17 +178,28 @@
               :right back)))
 
 
-(defn rot-cb-up
+(defn- rot-cb-up
   [{:keys [front back left right up down] :as cb}]
    (-> cb
        (assoc :up front
               :front down
-              :back (reverse (map reverse up))
-              :down (reverse (map reverse back))
+              :back (->> up
+                         (map #(into [] (reverse %)))
+                         reverse
+                         (into []))
+              :down (into [] (reverse (map #(into [] (reverse %)) back)))
               :right (rotate-clockwise right)
               :left (nth (iterate rotate-clockwise left) 3))))
 
-(defn apply-n
+
+
+;;rotate cube in clockwise direction
+(defn rot-cb-clkwise
+  [cb]
+  (nth (iterate rot-cb-left (nth (iterate rot-cb-up (rot-cb-left cb)) 3)) 3))
+
+
+(defn- apply-n
   [move-fn n]
   (fn [cb]
     (nth (iterate move-fn cb) n)))
@@ -215,7 +232,8 @@
    :B  apply-B
    :B' apply-B'
    :CL rot-cb-left
-   :CU rot-cb-up})
+   :CU rot-cb-up
+   :CW rot-cb-clkwise})
 
 
 (defn apply-moves
