@@ -11,7 +11,15 @@
    :f "white"})
 
 
-
+(defn get-resultant-cubes
+  [cb moves]
+  (reduce (fn [cubes-moves move-to-apply]
+            (let [{cube :cube} (last cubes-moves)]
+              (conj cubes-moves {:cube (cb/apply-moves cube move-to-apply)
+                                 :moves move-to-apply})))
+          [{:cube cb
+            :moves []}]
+          moves))
 
 
 
@@ -38,13 +46,13 @@
               :rx           15
               :ry           15}]))
 
+(defonce *current-conf (atom {:cube-moves (get-resultant-cubes cb/solved [])
+                              :current 0}))
 
 (defn web-cube
   [current-cube]
-  (clerk/html (into [:svg {:width 800 :height 800}]
+  (clerk/html (into [:svg {:width 800 :height 600}]
                     (generate-cube current-cube))))
-
-
 
 
 
@@ -76,14 +84,6 @@
 
 
 
-
-
-
-
-
-
-
-
 ;;make the alignment of cube as white in front and then rotate complete...
 ;; ...cube clockwise to set every one of four pieces.
 
@@ -99,6 +99,27 @@
 (def ph-3-right [:B' :U :U])
 (def ph-3-left [:B :U :U])
 (def ph-3-down [:B :B :U :U])
+
+
+
+
+
+
+;;set the white corners, required face should be in the upper side 
+(def front-up-right-corner-moves
+  {[:front 0 0] [:L :D :L']
+   [:front 0 2] []
+   [:front 2 0] [:D]
+   [:front 2 2] []
+   [:back 0 0] [:B' :D' :B]
+   [:back 0 2] [:L' :D :D :L]
+   [:back 2 0] [:D']
+   [:back 2 2] [:D :D]})
+;;apply this move until desired config. achieved
+(def try-corner-move [:R' :D' :R :D])
+
+
+
 
 
 (def front-up-edge-moves
@@ -117,7 +138,18 @@
 
 
 
-
+(defn get-piece
+  [cube corner]
+  (let [paths (case corner
+                :FUR [[:front 0 2] [:up 2 2] [:right 0 0]]
+                :FUL [[:front 0 0] [:up 2 0] [:left 0 2]]
+                :FDR [[:front 2 2 ] [:down 0 2] [:right 2 0]]
+                :FDL [[:front 2 0] [:down 0 0] [:left 2 2]]
+                :BUL [[:back 0 0] [:up 0 2] [:right 0 2]]
+                :BUR [[:back 0 2] [:up 0 0] [:left 0 0]]
+                :BDL [[:back 2 0] [:down 2 2] [:right 2 2]]
+                :BDR [[:back 2 2] [:down 2 0] [:left 2 0]])]
+    (into #{} (map #(get-in cube %)) paths)))
 
 
 
@@ -137,9 +169,9 @@
                     [3 :down]       [[:down 2 1] [:back 2 1]]}]
     (update-vals paths->loc (fn [[p1 p2]]
                               #{(get-in cb p1) (get-in cb p2)}))))
-;; (defn get-location-edge 
-;;   [{:keys [front back up down right left]} clr1 clr2]
-;;   ())
+
+(def test-cube (cb/apply-moves cb/solved [:R :L :D :L' :U' :L :D' :B :R :U' :U']))
+
 (defn find-piece-edge-move
   [{:keys [front back right left up down] :as cb}]
   (let [f-col (get-in front [1 1])
@@ -149,6 +181,38 @@
                                   keys
                                   (filter (comp #{#{f-col u-col}} (enumerate-edges cb)))
                                   first))))
+
+(defn find-corner-edge-move
+  [{:keys [front back right left up down] :as cb}]
+  (let [req-piece #{(get-in front [1 1]) (get-in up [1 1]) (get-in right [1 1])}
+        move-maps front-up-right-corner-moves]
+    (cond
+      (= req-piece (get-piece cb :FUL)) (get move-maps [:front 0 0]) 
+      (= req-piece (get-piece cb :FUR)) (get move-maps [:front 0 2])
+      (= req-piece (get-piece cb :FDL)) (get move-maps [:front 2 0])
+      (= req-piece (get-piece cb :FDR)) (get move-maps [:front 2 2])
+      (= req-piece (get-piece cb :BUL)) (get move-maps [:back 0 0])
+      (= req-piece (get-piece cb :BUR)) (get move-maps [:back 0 2])
+      (= req-piece (get-piece cb :BDL)) (get move-maps [:back 2 0])
+      (= req-piece (get-piece cb :BDR)) (get move-maps [:back 2 2]))))
+
+
+(defn set-corner-piece-moves
+  [cube]
+  (loop [cb cube
+         cnt 0]
+    (if (and (= (get-piece cb :FUR) #{(get-in cb [:front 1 1]) (get-in cb [:up 1 1]) (get-in cb [:right 1 1])})
+             (= (get-in cb [:front 0 2]) (get-in cb [:front 1 1])))
+      (into [] (apply concat (repeat cnt try-corner-move)))
+      (recur (cb/apply-moves cb try-corner-move) (inc cnt)))))
+
+(defn display-cube-moves
+  [cube-moves]
+  (map (comp web-cube :cube) cube-moves))
+
+
+
+
 
 
 
@@ -168,26 +232,44 @@
         moves))))
 
 
+(defn complete-white-corners
+  [cb]
+  (loop [ct 0
+         cube cb
+         moves []]
+    (let [corner-moves (find-corner-edge-move cube)
+          inter-cube (cb/apply-moves cube corner-moves)
+          orient-moves (conj (set-corner-piece-moves inter-cube) :CL)
+          result-cube (cb/apply-moves inter-cube orient-moves)
+          final-moves (into corner-moves orient-moves )]
+      (if (< ct 4)
+        (recur (inc ct)
+               result-cube
+               (conj moves final-moves))
+        moves))))
 
-(defn get-resultant-cubes
-  [cb moves]
-  (reduce (fn [cubes-moves move-to-apply]
-            (let [[cube _] (last cubes-moves)] 
-              (conj cubes-moves [(cb/apply-moves cube move-to-apply) move-to-apply]))) 
-          [[cb []]]
-          moves))
+(defn layer-1
+  [cube]
+  (let [moves (conj (white-cross-moves cube) [:CU])
+        cubes (get-resultant-cubes cube moves)
+        inter-cube (:cube (last cubes))
+        corner-moves (complete-white-corners inter-cube)]
+    (concat moves corner-moves [[:CU :CU]])))
 
 
 
+(display-cube-moves (get-resultant-cubes test-cube (layer-1 test-cube)))
 
 
-(white-cross-moves (cb/apply-moves cb/solved [:R :L :D :L' :U' :L :D' :B :R :U']))
+
+(comment 
+  (white-cross-moves (cb/apply-moves cb/solved [:R :L :D :L' :U' :L :D' :B :R :U']))
+  )
 
 
-(let [r-cube (cb/apply-moves cb/solved [:R :L :D :L' :U' :L :D' :B :R :U'])
-      moves (white-cross-moves r-cube)
-      cubes (get-resultant-cubes r-cube moves)]
-  (map (comp web-cube first) cubes))
+  
+
+
 
 
 
