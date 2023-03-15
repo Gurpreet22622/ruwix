@@ -17,3 +17,5 @@ output.calva-repl
 /clojure-lsp*
 /.cpcache
 /.clerk
+/node_modules
+/.shadow-cljs
