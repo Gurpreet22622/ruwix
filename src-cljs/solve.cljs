@@ -208,9 +208,11 @@
       (into [] (apply concat (repeat cnt try-corner-move)))
       (recur (cb/apply-moves cb try-corner-move) (inc cnt)))))
 
+
+(defonce current (r/atom 0))
 (defn display-cube-moves
   [cube-moves]
-  (let [current (r/atom 0)]
+  (let [current (r/atom (dec (count cube-moves)))]
     (fn [cube-moves]
       (let [{:keys [cube moves]} (get cube-moves @current)
             last? (= (inc @current) (count cube-moves))
@@ -277,12 +279,46 @@
     (concat moves corner-moves [[:CU :CU]])))
 
 
+(defonce *debug-conf (r/atom []))
+
+(defn debug-cube 
+  []
+  [display-cube-moves @*debug-conf])
 
 
 
+(defn in-position-yellow
+  [cube]
+  (loop [ct 0
+         cb cube
+         moves []]
+    (let [yellow-piece (get-in cb [:up 1 1])
+          left-yellow? (or (= (get-in cb [:front 1 0]) yellow-piece)
+                           (= (get-in cb [:left 1 2]) yellow-piece))
+          up-yellow? (or (= (get-in cb [:front 0 1]) yellow-piece)
+                         (= (get-in cb [:up 2 1]) yellow-piece))
+          n-moves (if left-yellow?
+                    (conj moves :CL)
+                    (if up-yellow?
+                      (into moves (conj adjust-left :CL))
+                      (conj moves :U)))]
+      (if (< ct 4)
+        (recur (if (= (last n-moves) :U)
+                 ct
+                 (inc ct))
+               (cb/apply-moves cube n-moves)
+               n-moves)
+        moves))))
 
 
+(def cb-test2 (reduce cb/apply-moves test-cube (layer-1 test-cube)))
 
+
+(comment
+  (let [moves (in-position-yellow cb-test2)
+        cube-moves (get-resultant-cubes cb-test2 (mapv vector moves))]
+    (reset! *debug-conf cube-moves))
+  )
 
 (comment
   (white-cross-moves (cb/apply-moves cb/solved [:R :L :D :L' :U' :L :D' :B :R :U'])))
@@ -298,7 +334,9 @@
 
 (defn main []
   [:<>
-   [display-cube-moves (get-resultant-cubes test-cube (layer-1 test-cube))]])
+   [display-cube-moves (get-resultant-cubes test-cube (layer-1 test-cube))]
+   [:h2 "debug-cube"]
+   [debug-cube]])
 
 (defn start []
   (rdom/render [main] (js/document.getElementById "app")))
