@@ -1,0 +1,17 @@
+{
+    "calva.replConnectSequences": [
+        {
+            "name": "backend + frontend",
+            "projectType": "shadow-cljs",
+            "cljsType": "shadow-cljs",
+            "menuSelections": {
+              "cljsLaunchBuilds": [
+                ":app",
+                ":test",
+              ],
+              "cljsDefaultBuild": ":app"
+            }
+          }
+    ],
+    "calva.paredit.killAlsoCutsToClipboard": true
+}

@@ -281,7 +281,7 @@
 
 (defonce *debug-conf (r/atom []))
 
-(defn debug-cube 
+(defn debug-cube
   []
   [display-cube-moves @*debug-conf])
 
@@ -313,12 +313,91 @@
 
 (def cb-test2 (reduce cb/apply-moves test-cube (layer-1 test-cube)))
 
+(def cb-test3 (cb/apply-moves (reduce cb/apply-moves test-cube (layer-1 test-cube)) (in-position-yellow cb-test2)))
+
+
+
+
+(defn layer-2
+  [cube]
+  (loop [ct 0
+         cb cube
+         moves []]
+    (let [front-piece (get-in cb [:front 1 1])
+          up-piece? (or (= (get-in cb [:front 0 1]) front-piece)
+                        (= (get-in cb [:left 0 1]) front-piece)
+                        (= (get-in cb [:right 0 1]) front-piece)
+                        (= (get-in cb [:back 0 1]) front-piece))
+          ready-to-move? (= (get-in cb [:front 0 1]) front-piece)
+          in-left? (= (get-in cb [:up 2 1]) (get-in cb [:left 1 2]))
+          in-conf? (and (= (get-in cb [:front 1 0]) (get-in cb [:front 1 1]) (get-in cb [:front 1 2]))
+                        (= (get-in cb [:right 1 0]) (get-in cb [:right 1 1]) (get-in cb [:right 1 2]))
+                        (= (get-in cb [:left 1 0]) (get-in cb [:left 1 1]) (get-in cb [:left 1 2]))
+                        (= (get-in cb [:back 1 0]) (get-in cb [:back 1 1]) (get-in cb [:back 1 2])))
+          new-moves (if up-piece?
+                      (if ready-to-move?
+                        (if in-left?
+                          (into moves adjust-left)
+                          (into moves adjust-right))
+                        (conj moves :U))
+                      (conj moves :CL))]
+      (if (< ct 4)
+        (recur (if (= (last new-moves) :CL)
+                 (inc ct)
+                 ct)
+               (cb/apply-moves cube new-moves)
+               new-moves)
+        (if in-conf?
+          new-moves
+          (recur (inc ct)
+                 (cb/apply-moves cube new-moves)
+                 new-moves))))))
+
+
+
+(def cb-test4 (get-in (last (let [moves (layer-2 cb-test3)
+                                  cube-moves (get-resultant-cubes cb-test3 (mapv vector moves))]
+                              (reset! *debug-conf cube-moves))) [:cube]))
+
+
+
+(defn seq-yellow-cross
+  [cube]
+  (loop [cb cube
+         moves []]
+    (let [h-line? (= (get-in cb [:up 1 0]) (get-in cb [:up 1 1]) (get-in cb [:up 1 2]))
+          v-line? (= (get-in cb [:up 0 1]) (get-in cb [:up 1 1]) (get-in cb [:up 2 1]))
+          cross? (and v-line? h-line?)
+          new-move (cond 
+                     cross? moves
+                     (and v-line? (not h-line?)) (into moves (into [:U] upper-yellow-cross))
+                     :else (into (into moves upper-yellow-cross) [:U]))]
+      (if cross?
+        new-move
+        (recur (cb/apply-moves cube new-move)
+               new-move)))))
+
+(comment 
+  (reset! *debug-conf [])
+  (seq-yellow-cross cb-test4)
+  )
+
+(comment
+  (let [moves (layer-2 cb-test4)
+        cube-moves (get-resultant-cubes cb-test4 (mapv vector moves))]
+    (reset! *debug-conf cube-moves)))
+
+
+(comment
+  (let [moves (layer-2 cb-test3)
+        cube-moves (get-resultant-cubes cb-test3 (mapv vector moves))]
+    (reset! *debug-conf cube-moves)))
+
 
 (comment
   (let [moves (in-position-yellow cb-test2)
         cube-moves (get-resultant-cubes cb-test2 (mapv vector moves))]
-    (reset! *debug-conf cube-moves))
-  )
+    (reset! *debug-conf cube-moves)))
 
 (comment
   (white-cross-moves (cb/apply-moves cb/solved [:R :L :D :L' :U' :L :D' :B :R :U'])))
@@ -330,11 +409,29 @@
   (find-piece-edge-move (cb/apply-moves cb/solved [:F'])))
 
 
-
+(comment
+  (cb/apply-moves test-cube (flatten (layer-1 test-cube)))
+  )
 
 (defn main []
   [:<>
-   [display-cube-moves (get-resultant-cubes test-cube (layer-1 test-cube))]
+   (let [l1-moves (layer-1 test-cube)
+         _ (js/console.log "l1-moves: "l1-moves)
+         cube1 (cb/apply-moves test-cube (flatten l1-moves))
+         _ (reset! *debug-conf [{:cube cube1 :moves []}])
+         mid-l1-moves (in-position-yellow cube1)
+         _ (js/console.log "mid l1 moves: "mid-l1-moves)
+         cube2 (cb/apply-moves cube1 (flatten mid-l1-moves))
+         _ (swap! *debug-conf conj {:cube cube2 :moves (flatten mid-l1-moves)})
+         l2-moves (layer-2 cube2)
+         _ (js/console.log "l2-moves: "l2-moves)
+         l2-cube (cb/apply-moves cube2 l2-moves)
+         l3-1-moves (seq-yellow-cross l2-cube)
+         _ (js/console.log "l3-1-moves: " l3-1-moves)
+         all-moves (conj (into [] l1-moves) mid-l1-moves l2-moves l3-1-moves)
+         _ (js/console.log all-moves)
+         ]
+     [display-cube-moves (get-resultant-cubes test-cube all-moves)])
    [:h2 "debug-cube"]
    [debug-cube]])
 
