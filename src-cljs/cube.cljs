@@ -217,6 +217,7 @@
 
 (def apply-B' (apply-n apply-B 3))
 
+(def rot-cb-right (apply-n rot-cb-left 3))
 
 (def moves->movefn
   {:F  apply-F
@@ -232,6 +233,7 @@
    :B  apply-B
    :B' apply-B'
    :CL rot-cb-left
+   :CR rot-cb-right
    :CU rot-cb-up
    :CW rot-cb-clkwise})
 

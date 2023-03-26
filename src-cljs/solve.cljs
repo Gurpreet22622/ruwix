@@ -82,7 +82,7 @@
 (def yellow-corners [:U :R :U' :L' :U :R' :U' :L])
 
 ;;orient yellow corners
-(def last-move [:R' :D' :R :D])
+(def last-move [:R' :D' :R :D :R' :D' :R :D])
 
 
 
@@ -377,6 +377,88 @@
         (recur (cb/apply-moves cube new-move)
                new-move)))))
 
+(def cb-test5 (cb/apply-moves cb-test4 (seq-yellow-cross cb-test4)))
+
+
+(defn adjust-yellow-cross
+  [cube]
+  (loop [ct 0
+         cb cube
+         moves []]
+    (let [match? (= (get-in cb [:front 0 1]) (get-in cb [:front 1 1]))
+          all-match? (and (= (get-in cb [:front 0 1]) (get-in cb [:front 1 1]))
+                          (= (get-in cb [:left 0 1]) (get-in cb [:left 1 1]))
+                          (= (get-in cb [:right 0 1]) (get-in cb [:right 1 1]))
+                          (= (get-in cb [:back 0 1]) (get-in cb [:back 1 1])))
+          new-move (cond
+                     (and (= ct 0) (not match?)) (conj moves :U)
+                     match? (conj moves :CR)
+                     (not match?) (if (= (get-in cb [:front 1 1]) (get-in cb [:left 0 1]))
+                                    (into moves swap-yellow-edges)
+                                    (flatten (conj moves [:CR] swap-yellow-edges [:CL] swap-yellow-edges))))]
+      (if all-match?
+        new-move
+        (recur (if (= (last new-move) :CR)
+                 (inc ct)
+                 ct)
+               (cb/apply-moves cube new-move)
+               new-move)))))
+
+(def cb-test6 (cb/apply-moves cb-test5 (adjust-yellow-cross cb-test5)))
+
+
+
+(defn move-yellow-corners
+  [cube]
+  (loop [ct 0
+         cb cube
+         moves []]
+    (let [corner-set-right? (and (or (= (get-in cb [:up 1 1]) (get-in cb [:up 2 2]))
+                                     (= (get-in cb [:up 1 1]) (get-in cb [:front 0 2]))
+                                     (= (get-in cb [:up 1 1]) (get-in cb [:right 0 0])))
+                                 (or (= (get-in cb [:front 1 1]) (get-in cb [:up 2 2]))
+                                     (= (get-in cb [:front 1 1]) (get-in cb [:front 0 2]))
+                                     (= (get-in cb [:front 1 1]) (get-in cb [:right 0 0])))
+                                 (or (= (get-in cb [:right 1 1]) (get-in cb [:up 2 2]))
+                                     (= (get-in cb [:right 1 1]) (get-in cb [:front 0 2]))
+                                     (= (get-in cb [:right 1 1]) (get-in cb [:right 0 0]))))
+          corner-set-left? (and (or (= (get-in cb [:up 1 1]) (get-in cb [:up 2 0]))
+                                    (= (get-in cb [:up 1 1]) (get-in cb [:front 0 0]))
+                                    (= (get-in cb [:up 1 1]) (get-in cb [:left 0 2])))
+                                (or (= (get-in cb [:front 1 1]) (get-in cb [:up 2 0]))
+                                    (= (get-in cb [:front 1 1]) (get-in cb [:front 0 0]))
+                                    (= (get-in cb [:front 1 1]) (get-in cb [:left 0 2])))
+                                (or (= (get-in cb [:left 1 1]) (get-in cb [:up 2 0]))
+                                    (= (get-in cb [:left 1 1]) (get-in cb [:front 0 0]))
+                                    (= (get-in cb [:left 1 1]) (get-in cb [:left 0 2]))))
+          new-moves (cond
+                      (and (< ct 4) (not corner-set-right?)) (conj moves :CR)
+                      (and corner-set-left? corner-set-right?) moves
+                      (and corner-set-right? (not corner-set-left?)) (into moves yellow-corners))]
+      (if (and corner-set-left? corner-set-right?)
+        new-moves
+        (recur (inc ct)
+               (cb/apply-moves cube new-moves)
+               new-moves)))))
+
+(def cb-test7 (cb/apply-moves cb-test6 (move-yellow-corners cb-test6)))
+
+(defn layer-3
+  [cube]
+  (loop [cb cube
+         moves []]
+    (let [in-position? (= (get-in cb [:up 1 1]) (get-in cb [:up 2 2]))
+          f (get-in cb [:front 1 1])
+          new-moves (cond
+                      (not in-position?) (into moves last-move)
+                      in-position? (conj moves :U'))]
+      (if (and (= (get-in cb [:front]) [[f f f] [f f f] [f f f]])
+               (= (get-in cb [:up]) (get-in cb/solved [:up])))
+        moves
+        (recur (cb/apply-moves cube new-moves)
+               new-moves)))))
+
+
 (comment 
   (reset! *debug-conf [])
   (seq-yellow-cross cb-test4)
@@ -416,19 +498,19 @@
 (defn main []
   [:<>
    (let [l1-moves (layer-1 test-cube)
-         _ (js/console.log "l1-moves: "l1-moves)
-         cube1 (cb/apply-moves test-cube (flatten l1-moves))
-         _ (reset! *debug-conf [{:cube cube1 :moves []}])
-         mid-l1-moves (in-position-yellow cube1)
-         _ (js/console.log "mid l1 moves: "mid-l1-moves)
-         cube2 (cb/apply-moves cube1 (flatten mid-l1-moves))
-         _ (swap! *debug-conf conj {:cube cube2 :moves (flatten mid-l1-moves)})
-         l2-moves (layer-2 cube2)
-         _ (js/console.log "l2-moves: "l2-moves)
+         cube1 (cb/apply-moves test-cube(flatten l1-moves))
+         mid-l1-moves (in-position-yellow cube1) 
+         cube2 (cb/apply-moves cube1 (flatten mid-l1-moves)) 
+         l2-moves (layer-2 cube2) 
          l2-cube (cb/apply-moves cube2 l2-moves)
-         l3-1-moves (seq-yellow-cross l2-cube)
-         _ (js/console.log "l3-1-moves: " l3-1-moves)
-         all-moves (conj (into [] l1-moves) mid-l1-moves l2-moves l3-1-moves)
+         l3-1-moves (seq-yellow-cross l2-cube) 
+         l3-1-cube (cb/apply-moves l2-cube l3-1-moves)
+         l3-2-moves (adjust-yellow-cross l3-1-cube)
+         l3-2-cube (cb/apply-moves l3-1-cube l3-2-moves)
+         l3-3-moves (move-yellow-corners l3-2-cube)
+         l3-3-cube (cb/apply-moves l3-2-cube l3-3-moves)
+         final-moves (layer-3 l3-3-cube)
+         all-moves (conj (into [] l1-moves) mid-l1-moves l2-moves l3-1-moves l3-2-moves l3-3-moves final-moves)
          _ (js/console.log all-moves)
          ]
      [display-cube-moves (get-resultant-cubes test-cube all-moves)])
