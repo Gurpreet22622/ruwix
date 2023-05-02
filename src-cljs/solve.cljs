@@ -2,6 +2,7 @@
   (:require [cube :as cb]
             [reagent.core :as r]
             [reagent.dom :as rdom]
+            [tutorial :as t]
             #_[nextjournal.clerk :as clerk]))
 
 (def face->color
