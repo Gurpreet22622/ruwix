@@ -2,7 +2,7 @@
   (:require [cube :as cb]
             [reagent.core :as r]
             [reagent.dom :as rdom]
-            [tutorial :as t]
+            [tutorial :as t] 
             #_[nextjournal.clerk :as clerk]))
 
 (def face->color
@@ -210,28 +210,42 @@
       (recur (cb/apply-moves cb try-corner-move) (inc cnt)))))
 
 
-(defonce current (r/atom 0))
+(defn vec-to-str
+  [list-moves]
+  (let [k (for [key list-moves]
+            (str (name key)))
+        final-str (clojure.string/join " " (into [] k))]
+    final-str))
+
 (defn display-cube-moves
   [cube-moves]
-  (let [current (r/atom (dec (count cube-moves)))]
+  (let [*current (r/atom (dec (count cube-moves)))]
     (fn [cube-moves]
-      (let [{:keys [cube moves]} (get cube-moves @current)
-            last? (= (inc @current) (count cube-moves))
+      (let [{:keys [cube moves]} (get cube-moves @*current)
+            last? (= (inc @*current) (count cube-moves))
             next-moves (if last? []
-                           (get-in cube-moves [(inc @current) :moves]))]
+                           (get-in cube-moves [(inc @*current) :moves]))]
         [:div
          [web-cube cube]
          [:pre (str "previous: " moves "    next: " next-moves)]
          [:button
           {:on-click (fn []
-                       (swap! current dec)
-                       (js/console.log @current))
-           :disabled (zero? @current)} "<<previous"]
+                       (swap! *current dec)
+                       #_(js/console.log @*current))
+           :disabled (zero? @*current)} "<<previous"]
          [:button
           {:on-click (fn []
-                       (swap! current inc)
-                       (js/console.log @current))
-           :disabled last?} "next>>"]]))))
+                       (swap! *current inc)
+                       #_(js/console.log @*current))
+           :disabled last?} "next>>"]
+         [:h2 "List of moves"]
+         #_(js/console.log cube-moves) 
+         [:ul
+          (doall (map-indexed (fn [idx {:keys [moves]}]
+                                ^{:key idx} [:li [:input {:type "button"
+                                                           :value (vec-to-str moves)
+                                                           :on-click #(reset! *current idx)}]])
+                              cube-moves))]]))))
 
 
 
@@ -282,9 +296,7 @@
 
 (defonce *debug-conf (r/atom []))
 
-(defn debug-cube
-  []
-  [display-cube-moves @*debug-conf])
+
 
 
 
@@ -499,25 +511,32 @@
 (defn main []
   [:<>
    (let [l1-moves (layer-1 test-cube)
-         cube1 (cb/apply-moves test-cube(flatten l1-moves))
-         mid-l1-moves (in-position-yellow cube1) 
-         cube2 (cb/apply-moves cube1 (flatten mid-l1-moves)) 
-         l2-moves (layer-2 cube2) 
+         _ (js/console.log l1-moves)
+         cube1 (cb/apply-moves test-cube (flatten l1-moves))
+         mid-l1-moves (in-position-yellow cube1)
+         _ (js/console.log mid-l1-moves)
+         cube2 (cb/apply-moves cube1 (flatten mid-l1-moves))
+         l2-moves (layer-2 cube2)
+         _ (js/console.log l2-moves)
          l2-cube (cb/apply-moves cube2 l2-moves)
-         l3-1-moves (seq-yellow-cross l2-cube) 
+         l3-1-moves (seq-yellow-cross l2-cube)
+         _ (js/console.log l3-1-moves)
          l3-1-cube (cb/apply-moves l2-cube l3-1-moves)
          l3-2-moves (adjust-yellow-cross l3-1-cube)
+         _ (js/console.log l3-2-moves)
          l3-2-cube (cb/apply-moves l3-1-cube l3-2-moves)
          l3-3-moves (move-yellow-corners l3-2-cube)
+         _ (js/console.log l3-3-moves)
          l3-3-cube (cb/apply-moves l3-2-cube l3-3-moves)
          final-moves (layer-3 l3-3-cube)
+         _ (js/console.log l3-3-cube)
+         _ (js/console.log final-moves)
          all-moves (conj (into [] l1-moves) mid-l1-moves l2-moves l3-1-moves l3-2-moves l3-3-moves final-moves)
-         _ (js/console.log all-moves)
-         ]
-     [display-cube-moves (get-resultant-cubes test-cube all-moves)])
-   [:h2 "debug-cube"]
-   [debug-cube]])
-
+         #_ (js/console.log all-moves)]
+     [:div
+      [:h1 [:span {:style {:color "red"}} "Ruwix Solver"]]
+      [display-cube-moves (get-resultant-cubes test-cube all-moves)]
+      ])])
 (defn start []
   (rdom/render [main] (js/document.getElementById "app")))
 (start)
