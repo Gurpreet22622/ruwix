@@ -173,7 +173,12 @@
     (update-vals paths->loc (fn [[p1 p2]]
                               #{(get-in cb p1) (get-in cb p2)}))))
 
-(def test-cube (cb/apply-moves cb/solved [:R :L :D :L' :U' :L :D' :B :R :U' :U' :CU]))
+(def test-cube2 (cb/apply-moves cb/solved [:R :L :D :L' :U' :L :D' :B :R :U' :U' :CU]))
+
+#_(def test-cube (cb/apply-moves cb/solved [:L :D :L' :U' :B :R :U' :CU]))
+
+(def layer2-testcube (cb/apply-moves cb/solved [:L :L' :U' :B :R :U' :CU]))
+(def test-cube layer2-testcube)
 
 (defn find-piece-edge-move
   [{:keys [front back right left up down] :as cb}]
@@ -291,6 +296,8 @@
         cubes (get-resultant-cubes cube moves)
         inter-cube (:cube (last cubes))
         corner-moves (complete-white-corners inter-cube)]
+    #_(js/console.log moves)
+    #_(js/console.log corner-moves)
     (concat moves corner-moves [[:CU :CU]])))
 
 
@@ -324,9 +331,9 @@
         moves))))
 
 
-(def cb-test2 (reduce cb/apply-moves test-cube (layer-1 test-cube)))
-
-(def cb-test3 (cb/apply-moves (reduce cb/apply-moves test-cube (layer-1 test-cube)) (in-position-yellow cb-test2)))
+(comment	 (def cb-test2 (reduce cb/apply-moves test-cube (layer-1 test-cube)))
+          (def cb-test3 (cb/apply-moves (reduce cb/apply-moves test-cube (layer-1 test-cube)) (in-position-yellow cb-test2)))
+          )
 
 
 
@@ -336,6 +343,9 @@
   (loop [ct 0
          cb cube
          moves []]
+    (js/console.log "counter: " ct)
+    (js/console.log "cube: " cb)
+    (js/console.log "moves: " moves)
     (let [front-piece (get-in cb [:front 1 1])
           up-piece? (or (= (get-in cb [:front 0 1]) front-piece)
                         (= (get-in cb [:left 0 1]) front-piece)
@@ -368,9 +378,10 @@
 
 
 
-(def cb-test4 (get-in (last (let [moves (layer-2 cb-test3)
-                                  cube-moves (get-resultant-cubes cb-test3 (mapv vector moves))]
-                              (reset! *debug-conf cube-moves))) [:cube]))
+(comment (def cb-test4 (get-in (last (let [moves (layer-2 cb-test3)
+                                           cube-moves (get-resultant-cubes cb-test3 (mapv vector moves))]
+                                       (reset! *debug-conf cube-moves))) [:cube]))
+         )
 
 
 
@@ -390,7 +401,8 @@
         (recur (cb/apply-moves cube new-move)
                new-move)))))
 
-(def cb-test5 (cb/apply-moves cb-test4 (seq-yellow-cross cb-test4)))
+(comment (def cb-test5 (cb/apply-moves cb-test4 (seq-yellow-cross cb-test4)))
+         )
 
 
 (defn adjust-yellow-cross
@@ -408,16 +420,17 @@
                      match? (conj moves :CR)
                      (not match?) (if (= (get-in cb [:front 1 1]) (get-in cb [:left 0 1]))
                                     (into moves swap-yellow-edges)
-                                    (flatten (conj moves [:CR] swap-yellow-edges [:CL] swap-yellow-edges))))]
+                                    (vec (flatten (conj moves [:CR] swap-yellow-edges [:CL] swap-yellow-edges)))))]
       (if all-match?
-        new-move
+        moves
         (recur (if (= (last new-move) :CR)
                  (inc ct)
                  ct)
                (cb/apply-moves cube new-move)
                new-move)))))
 
-(def cb-test6 (cb/apply-moves cb-test5 (adjust-yellow-cross cb-test5)))
+(comment (def cb-test6 (cb/apply-moves cb-test5 (adjust-yellow-cross cb-test5)))
+          )
 
 
 
@@ -454,7 +467,8 @@
                (cb/apply-moves cube new-moves)
                new-moves)))))
 
-(def cb-test7 (cb/apply-moves cb-test6 (move-yellow-corners cb-test6)))
+(comment (def cb-test7 (cb/apply-moves cb-test6 (move-yellow-corners cb-test6)))
+         )
 
 (defn layer-3
   [cube]
@@ -519,16 +533,16 @@
          l2-moves (layer-2 cube2)
          _ (js/console.log l2-moves)
          l2-cube (cb/apply-moves cube2 l2-moves)
-         l3-1-moves (seq-yellow-cross l2-cube)
+         l3-1-moves []#_(seq-yellow-cross l2-cube)
          _ (js/console.log l3-1-moves)
          l3-1-cube (cb/apply-moves l2-cube l3-1-moves)
-         l3-2-moves (adjust-yellow-cross l3-1-cube)
+         l3-2-moves []#_(adjust-yellow-cross l3-1-cube)
          _ (js/console.log l3-2-moves)
          l3-2-cube (cb/apply-moves l3-1-cube l3-2-moves)
-         l3-3-moves (move-yellow-corners l3-2-cube)
+         l3-3-moves []#_(move-yellow-corners l3-2-cube)
          _ (js/console.log l3-3-moves)
          l3-3-cube (cb/apply-moves l3-2-cube l3-3-moves)
-         final-moves (layer-3 l3-3-cube)
+         final-moves []#_(layer-3 l3-3-cube)
          _ (js/console.log l3-3-cube)
          _ (js/console.log final-moves)
          all-moves (conj (into [] l1-moves) mid-l1-moves l2-moves l3-1-moves l3-2-moves l3-3-moves final-moves)
