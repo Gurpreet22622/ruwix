@@ -1,4 +1,4 @@
-(ns cube
+(ns ruwix.cube
   (:require [hyperfiddle.rcf :refer [tests]]))
 (defn- make-face
   [color]

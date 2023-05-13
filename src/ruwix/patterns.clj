@@ -1,6 +1,6 @@
-(ns patterns 
-  (:require [cube :as cb]
-            [solve :refer [web-cube]]))
+(ns ruwix.patterns 
+  (:require [ruwix.cube :as cb]
+            [ruwix.solve :refer [web-cube]]))
 
 
 

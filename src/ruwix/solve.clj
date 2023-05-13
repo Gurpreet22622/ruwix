@@ -1,5 +1,5 @@
-(ns solve
-  (:require [cube :as cb]))
+(ns ruwix.solve
+  (:require [ruwix.cube :as cb]))
 
 (def face->color
   {:a "green"
