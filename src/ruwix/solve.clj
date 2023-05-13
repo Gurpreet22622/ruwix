@@ -173,7 +173,7 @@
                                   (filter (comp #{#{f-col u-col}} (enumerate-edges cb)))
                                   first))))
 (defn find-piece-edge-move
-  [{{:keys [front up] :as cb} :end-cube :as conf}]
+  [{{:keys [front up] :as cb} :end-cube}]
   (let [f-col (get-in front [1 1])
         u-col (get-in up [1 1])
         front-up-edge-moves {[1 :up]         []
@@ -270,6 +270,8 @@
        :description "formation of white cross on front face"
        :child-confs child-confs})))
 
+
+;; TODO: move to new data structure
 (defn complete-white-corners
   [cb]
   (loop [ct 0
@@ -286,6 +288,8 @@
                (conj moves final-moves))
         moves))))
 
+
+;;TODO: move to new data structure
 (defn layer-1
   [cube]
   (let [moves (conj (white-cross-moves' cube) [:CU])
