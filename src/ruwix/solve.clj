@@ -194,14 +194,22 @@
                                             (filter (comp #{#{f-col u-col}} (enumerate-edges cb)))
                                             first))]
     {:start-cube cb
-     :child-confs moves
+     :moves moves
      :description "find move to correct front up edge peice"
      :end-cube (cb/apply-moves cb moves)}))
 
+
 (defn find-corner-edge-move
-  [{{:keys [front back right left up down] :as cb} :end-cube :as conf}]
+  [{:keys [front up right] :as cb}]
   (let [req-piece #{(get-in front [1 1]) (get-in up [1 1]) (get-in right [1 1])}
-        move-maps front-up-right-corner-moves]
+        move-maps {[:front 0 0] [:L :D :L']
+                   [:front 0 2] []
+                   [:front 2 0] [:D]
+                   [:front 2 2] []
+                   [:back 0 0] [:B' :D' :B]
+                   [:back 0 2] [:L' :D :D :L]
+                   [:back 2 0] [:D']
+                   [:back 2 2] [:D :D]}]
     (cond
       (= req-piece (get-piece cb :FUL)) (get move-maps [:front 0 0])
       (= req-piece (get-piece cb :FUR)) (get move-maps [:front 0 2])
@@ -212,6 +220,31 @@
       (= req-piece (get-piece cb :BDL)) (get move-maps [:back 2 0])
       (= req-piece (get-piece cb :BDR)) (get move-maps [:back 2 2]))))
 
+(defn find-corner-edge-move2
+  [{{:keys [front right up] :as cb} :end-cube}]
+  (let [req-piece #{(get-in front [1 1]) (get-in up [1 1]) (get-in right [1 1])}
+        move-maps {[:front 0 0] [:L :D :L']
+                   [:front 0 2] []
+                   [:front 2 0] [:D]
+                   [:front 2 2] []
+                   [:back 0 0] [:B' :D' :B]
+                   [:back 0 2] [:L' :D :D :L]
+                   [:back 2 0] [:D']
+                   [:back 2 2] [:D :D]}
+        moves (cond
+                (= req-piece (get-piece cb :FUL)) (get move-maps [:front 0 0])
+                (= req-piece (get-piece cb :FUR)) (get move-maps [:front 0 2])
+                (= req-piece (get-piece cb :FDL)) (get move-maps [:front 2 0])
+                (= req-piece (get-piece cb :FDR)) (get move-maps [:front 2 2])
+                (= req-piece (get-piece cb :BUL)) (get move-maps [:back 0 0])
+                (= req-piece (get-piece cb :BUR)) (get move-maps [:back 0 2])
+                (= req-piece (get-piece cb :BDL)) (get move-maps [:back 2 0])
+                (= req-piece (get-piece cb :BDR)) (get move-maps [:back 2 2]))]
+    {:start-cube cb
+     :end-cube (cb/apply-moves cb moves)
+     :description "finding respective position of front up right corner and place it"
+     :moves moves}))
+
 
 (defn set-corner-piece-moves
   [cube]
@@ -220,6 +253,19 @@
     (if (and (= (get-piece cb :FUR) #{(get-in cb [:front 1 1]) (get-in cb [:up 1 1]) (get-in cb [:right 1 1])})
              (= (get-in cb [:front 0 2]) (get-in cb [:front 1 1])))
       (into [] (apply concat (repeat cnt try-corner-move)))
+      (recur (cb/apply-moves cb try-corner-move) (inc cnt)))))
+
+(defn set-corner-piece-moves2
+  [{cube :end-cube}]
+  (loop [cb cube
+         cnt 0]
+    (if (and (= (get-piece cb :FUR) #{(get-in cb [:front 1 1]) (get-in cb [:up 1 1]) (get-in cb [:right 1 1])})
+             (= (get-in cb [:front 0 2]) (get-in cb [:front 1 1])))
+      (let [moves (into [] (apply concat (repeat cnt try-corner-move)))]
+        {:start-cube cube
+         :end-cube cb
+         :description (str "orient corner piece. flipping: " cnt)
+         :moves moves})
       (recur (cb/apply-moves cb try-corner-move) (inc cnt)))))
 
 
@@ -261,18 +307,51 @@
             final-conf   {:start-cube cube
                           :end-cube result-cube
                           :description (str "edge: " (inc ct))
-                          :child-confs (into (:child-confs inter-conf) extra-move)}]
+                          :moves (into (:moves inter-conf) extra-move)}]
         (recur (inc ct)
                result-cube
                (conj child-confs final-conf)))
-      {:start-cube cb
+      {:start-cube (:start-cube conf)
        :end-cube (:end-cube (last child-confs))
-       :description "formation of white cross on front face"
-       :child-confs child-confs})))
+       :description (str (:description conf) " + white cross moves")
+       :child-confs [conf
+                     {:start-cube cb
+                      :end-cube (:end-cube (last child-confs))
+                      :description "formation of white cross on front face"
+                      :child-confs child-confs}]})))
 
 
-;; TODO: move to new data structure
+
+
 (defn complete-white-corners
+  [{cb :end-cube :as conf}]
+  (loop [ct 0
+         cube cb
+         child-confs []]
+    (if (< ct 4)
+      (let [corner-conf (find-corner-edge-move2 {:end-cube cube})
+            inter-cube (:end-cube corner-conf)
+            orient-moves (conj (:moves (set-corner-piece-moves2 corner-conf)) :CL)
+            result-cube (cb/apply-moves inter-cube orient-moves)
+            final-conf {:start-cube cube
+                        :end-cube result-cube
+                        :description (str "count: " (inc ct))
+                        :moves (into (:moves corner-conf) orient-moves)}]
+        (recur (inc ct)
+               result-cube
+               (conj child-confs final-conf)))
+      {:start-cube (:start-cube conf)
+       :end-cube (:end-cube (last child-confs))
+       :description (str (:description conf) " + complete white corners")
+       :child-confs [conf 
+                     {:start-cube cb
+                      :end-cube (:end-cube (last child-confs))
+                      :description "setting of all corner pieces on upper face"
+                      :child-confs child-confs}]})))
+
+
+
+(defn complete-white-corners'
   [cb]
   (loop [ct 0
          cube cb
@@ -290,12 +369,33 @@
 
 
 ;;TODO: move to new data structure
+
 (defn layer-1
+  [conf]
+  (let [init-conf (-> conf
+                      white-cross-moves
+                      (cb/apply-moves-on-conf [:CU] "rotate cube front->up")) 
+        inter-conf (complete-white-corners init-conf)]
+    #_(js/console.log moves)
+    #_(js/console.log corner-moves)
+    (cb/apply-moves-on-conf inter-conf [:CU :CU] "rotate cube up->down")
+    ))
+
+
+(comment
+  (layer-1 (cb/apply-moves-on-conf {:end-cube cb/solved
+                                    :start-cube cb/solved}
+                                   [:U :D :L :U' :R' :L]
+                                   "variable cube"))
+  )
+
+
+(defn layer-1'
   [cube]
   (let [moves (conj (white-cross-moves' cube) [:CU])
         cubes (get-resultant-cubes cube moves)
         inter-cube (:cube (last cubes))
-        corner-moves (complete-white-corners inter-cube)]
+        corner-moves (complete-white-corners' inter-cube)]
     #_(js/console.log moves)
     #_(js/console.log corner-moves)
     (concat moves corner-moves [[:CU :CU]])))
@@ -330,8 +430,8 @@
         moves))))
 
 
-(comment	 (def cb-test2 (reduce cb/apply-moves test-cube (layer-1 test-cube)))
-          (def cb-test3 (cb/apply-moves (reduce cb/apply-moves test-cube (layer-1 test-cube)) (in-position-yellow cb-test2))))
+(comment	 (def cb-test2 (reduce cb/apply-moves test-cube (layer-1' test-cube)))
+          (def cb-test3 (cb/apply-moves (reduce cb/apply-moves test-cube (layer-1' test-cube)) (in-position-yellow cb-test2))))
 
 
 
@@ -495,13 +595,17 @@
 
 
 (comment
-  (let [moves (in-position-yellow cb-test2)
-        cube-moves (get-resultant-cubes cb-test2 (mapv vector moves))]
-    (reset! *debug-conf cube-moves)))
+  (let [moves (in-position-yellow (reduce cb/apply-moves test-cube (layer-1' test-cube)))
+        cube-moves (get-resultant-cubes (reduce cb/apply-moves test-cube (layer-1' test-cube)) (mapv vector moves))]
+    cube-moves))
 
 (comment
   (white-cross-moves' (cb/apply-moves cb/solved [:R :L :D :L' :U' :L :D' :B :R :U']))
-  (white-cross-moves {:end-cube (cb/apply-moves cb/solved [:R :L :D :L' :U' :L :D' :B :R :U'])}))
+  (let [req-conf (white-cross-moves {:end-cube (cb/apply-moves cb/solved [:R :L :D :L' :U' :L :D' :B :R :U'])})
+        req-cube (:end-cube req-conf)]
+    (complete-white-corners' (cb/apply-moves req-cube [:CU]))
+    (complete-white-corners (cb/apply-moves-on-conf req-conf [:CU]))
+    ))
 
 
 
@@ -512,6 +616,6 @@
 
 
 (comment
-  (cb/apply-moves test-cube (flatten (layer-1 test-cube))))
+  (cb/apply-moves test-cube (flatten (layer-1' test-cube))))
 
 

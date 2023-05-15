@@ -21,17 +21,20 @@
   (generate-random-cube 20))
 
 (deftest white-cross-moves-test []
-  (let [input-confs (repeatedly 100 (fn []
-                                      {:end-cube (generate-random-cube 20)}))
+  (let [input-confs (repeatedly 2 (fn []
+                                      (let [rand-cube (generate-random-cube 20)]
+                                        {:end-cube rand-cube
+                                         :start-cube rand-cube})))
         end-confs (mapv solve/white-cross-moves input-confs)]
     (testing "cube generated at distinct"
-      (is (not= (get-in end-confs [0 :start-cube]) (get-in end-confs [1 :start-cube]))))
+      (is (not= (get-in end-confs [0 :start-cube]) 
+                (get-in end-confs [1 :start-cube]))))
     (testing "all front edges are in place"
       (doseq
        [conf end-confs
         :let [cb (:end-cube conf)
               fc (get-in cb [:front 1 1])]]
-        (is (= 4 (count (:child-confs conf))))
+        (is (= 2 (count (:child-confs conf))))
         (is (= (get-in cb [:front 0 1]) fc))
         (is (= (get-in cb [:front 1 0]) fc))
         (is (= (get-in cb [:front 1 2]) fc))

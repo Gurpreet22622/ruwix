@@ -1,5 +1,6 @@
 (ns ruwix.cube
-  (:require [hyperfiddle.rcf :refer [tests]]))
+  (:require [hyperfiddle.rcf :refer [tests]]
+            [ruwix.cube :as cb]))
 (defn- make-face
   [color]
   (into [] (repeat 3 (into [] (repeat 3 color)))))
@@ -243,6 +244,24 @@
   (reduce (fn [cube move]
             ((get moves->movefn move) cube))
           cb moves))
+
+(defn apply-moves-on-conf
+  [{:keys [end-cube description] 
+    :or {description "solved"} 
+    :as conf}
+   moves 
+   desc]
+  (let [final-cube (reduce (fn [cube move]
+                       ((get moves->movefn move) cube))
+                     end-cube moves)]
+   {:start-cube (:start-cube conf)
+   :end-cube final-cube
+   :description (str description " + " desc)
+   :child-confs [conf
+                 {:start-cube end-cube
+                  :end-cube final-cube
+                  :description desc
+                  :moves moves}]}))
 
 
 (tests
