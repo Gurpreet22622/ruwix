@@ -1,5 +1,6 @@
 (ns ruwix.solve
-  (:require [ruwix.cube :as cb]))
+  (:require [clojure.string :as str]
+            [ruwix.cube :as cb]))
 
 (def face->color
   {:a "green"
@@ -22,36 +23,36 @@
 
 
 
-(defn generate-cube
-  [{:keys [front back up down left right]}]
-  (for [[face pos-x pos-y] [[left 170 0]
-                            [front 170 160]
-                            [right 170 320]
-                            [back 170 480]
-                            [up 10 160]
-                            [down 330 160]]
-        row                [0 1 2]
-        col                [0 1 2]
-        :let               [x (+ (* 50 row) (+ pos-x 10))
-                            y (+ (* 50 col) (+ pos-y 10))
-                            color (face->color (get-in face [row col]))]]
-    [:rect   {:x            y
-              :y            x
-              :width        50
-              :height       50
-              :fill         color
-              :stroke       "black"
-              :stroke-width 5
-              :rx           15
-              :ry           15}]))
+;; (defn generate-cube
+;;   [{:keys [front back up down left right]}]
+;;   (for [[face pos-x pos-y] [[left 170 0]
+;;                             [front 170 160]
+;;                             [right 170 320]
+;;                             [back 170 480]
+;;                             [up 10 160]
+;;                             [down 330 160]]
+;;         row                [0 1 2]
+;;         col                [0 1 2]
+;;         :let               [x (+ (* 50 row) (+ pos-x 10))
+;;                             y (+ (* 50 col) (+ pos-y 10))
+;;                             color (face->color (get-in face [row col]))]]
+;;     [:rect   {:x            y
+;;               :y            x
+;;               :width        50
+;;               :height       50
+;;               :fill         color
+;;               :stroke       "black"
+;;               :stroke-width 5
+;;               :rx           15
+;;               :ry           15}]))
 
-(defonce *current-conf (atom {:cube-moves (get-resultant-cubes cb/solved [])
-                              :current 0}))
+;; (defonce *current-conf (atom {:cube-moves (get-resultant-cubes cb/solved [])
+;;                               :current 0}))
 
-(defn web-cube
-  [current-cube]
-  (into [:svg {:width 800 :height 600}]
-        (generate-cube current-cube)))
+;; (defn web-cube
+;;   [current-cube]
+;;   (into [:svg {:width 800 :height 600}]
+;;         (generate-cube current-cube)))
 
 
 
@@ -273,7 +274,7 @@
   [list-moves]
   (let [k (for [key list-moves]
             (str (name key)))
-        final-str (clojure.string/join " " (into [] k))]
+        final-str (str/join " " (into [] k))]
     final-str))
 
 
@@ -315,6 +316,11 @@
        :end-cube (:end-cube (last child-confs))
        :description (str (:description conf) " + white cross moves")
        :child-confs [conf
+                     
+
+
+
+
                      {:start-cube cb
                       :end-cube (:end-cube (last child-confs))
                       :description "formation of white cross on front face"
@@ -342,8 +348,13 @@
                (conj child-confs final-conf)))
       {:start-cube (:start-cube conf)
        :end-cube (:end-cube (last child-confs))
+
+
+
        :description (str (:description conf) " + complete white corners")
-       :child-confs [conf 
+       :child-confs 
+       
+       [conf
                      {:start-cube cb
                       :end-cube (:end-cube (last child-confs))
                       :description "setting of all corner pieces on upper face"
@@ -374,20 +385,48 @@
   [conf]
   (let [init-conf (-> conf
                       white-cross-moves
-                      (cb/apply-moves-on-conf [:CU] "rotate cube front->up")) 
+                      (cb/apply-moves-on-conf [:CU] "rotate cube front->up"))
         inter-conf (complete-white-corners init-conf)]
     #_(js/console.log moves)
     #_(js/console.log corner-moves)
-    (cb/apply-moves-on-conf inter-conf [:CU :CU] "rotate cube up->down")
-    ))
+    (cb/apply-moves-on-conf inter-conf [:CU :CU] "rotate cube up->down")))
+
+
+
+
+(defn dfs-traversal
+  ([tree]
+   (println (get-in tree [:description]))
+   (dfs-traversal tree 1))
+  ([tree depth]
+
+   (doseq [child (get-in tree [:child-confs])]
+
+     (println (str (str/join (repeat depth "    ")) depth " : "
+                   (get-in child [:description])))
+     (dfs-traversal child (inc depth)))))
+
+
+
+
+
 
 
 (comment
-  (layer-1 (cb/apply-moves-on-conf {:end-cube cb/solved
-                                    :start-cube cb/solved}
-                                   [:U :D :L :U' :R' :L]
-                                   "variable cube"))
+  (let [req-tree (layer-1 (cb/apply-moves-on-conf {:end-cube cb/solved
+                                                   :start-cube cb/solved
+                                                   :description "solved"}
+                                                  [:U :D :L :U' :R' :L]
+                                                  "variable cube"))]
+    (dfs-traversal req-tree)
+    (dfs-traversal (combine-nodes req-tree)))
   )
+
+
+
+
+
+
 
 
 (defn layer-1'
@@ -604,8 +643,7 @@
   (let [req-conf (white-cross-moves {:end-cube (cb/apply-moves cb/solved [:R :L :D :L' :U' :L :D' :B :R :U'])})
         req-cube (:end-cube req-conf)]
     (complete-white-corners' (cb/apply-moves req-cube [:CU]))
-    (complete-white-corners (cb/apply-moves-on-conf req-conf [:CU]))
-    ))
+    (complete-white-corners (cb/apply-moves-on-conf req-conf [:CU]))))
 
 
 
