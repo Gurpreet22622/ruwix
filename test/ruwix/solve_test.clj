@@ -21,7 +21,7 @@
   (generate-random-cube 20))
 
 (deftest white-cross-moves-test []
-  (let [input-confs (repeatedly 2 (fn []
+  (let [input-confs (repeatedly 10 (fn []
                                       (let [rand-cube (generate-random-cube 20)]
                                         {:end-cube rand-cube
                                          :start-cube rand-cube})))
@@ -43,3 +43,26 @@
         (is (= (get-in cb [:right 1 1]) (get-in cb [:right 1 0])))
         (is (= (get-in cb [:up 1 1]) (get-in cb [:up 2 1])))
         (is (= (get-in cb [:down 1 1]) (get-in cb [:down 0 1])))))))
+
+
+(deftest layer-1-test []
+  (let [input-confs (repeatedly 1000 (fn []
+                                     (let [rand-cube (generate-random-cube 20)]
+                                       {:end-cube rand-cube
+                                        :start-cube rand-cube})))
+        end-conf (mapv solve/layer-1 input-confs)]
+    (print (get-in end-conf [0 :start-cube]))
+    (testing "layer 1 is completely solved"
+      (doseq
+       [conf end-conf
+        :let [cb (:end-cube conf)
+              fc (get-in cb [:front 1 1])
+              dc (get-in cb [:down 1 1])
+              bc (get-in cb [:back 1 1])
+              lc (get-in cb [:left 1 1])
+              rc (get-in cb [:right 1 1])]]
+        (is (= (get-in cb [:front 2]) [fc fc fc]))
+        (is (= (get-in cb [:down]) [[dc dc dc] [dc dc dc] [dc dc dc]]))
+        (is (= (get-in cb [:back 2]) [bc bc bc]))
+        (is (= (get-in cb [:left 2]) [lc lc lc]))
+        (is (= (get-in cb [:right 2]) [rc rc rc]))))))
