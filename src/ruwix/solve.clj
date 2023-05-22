@@ -316,11 +316,6 @@
        :end-cube (:end-cube (last child-confs))
        :description (str (:description conf) " + white cross moves")
        :child-confs [conf
-                     
-
-
-
-
                      {:start-cube cb
                       :end-cube (:end-cube (last child-confs))
                       :description "formation of white cross on front face"
@@ -348,17 +343,14 @@
                (conj child-confs final-conf)))
       {:start-cube (:start-cube conf)
        :end-cube (:end-cube (last child-confs))
-
-
-
        :description (str (:description conf) " + complete white corners")
-       :child-confs 
-       
+       :child-confs
+
        [conf
-                     {:start-cube cb
-                      :end-cube (:end-cube (last child-confs))
-                      :description "setting of all corner pieces on upper face"
-                      :child-confs child-confs}]})))
+        {:start-cube cb
+         :end-cube (:end-cube (last child-confs))
+         :description "setting of all corner pieces on upper face"
+         :child-confs child-confs}]})))
 
 
 
@@ -381,7 +373,30 @@
 
 ;;TODO: move to new data structure
 
+
+
 (defn layer-1
+  [conf]
+  (let [init-conf (-> conf
+                      white-cross-moves)
+        conf-2 (-> init-conf
+                   (cb/apply-moves-on-conf [:CU] "rotate cube front->up"))
+        conf-3 (complete-white-corners conf-2)
+        conf-4 (cb/apply-moves-on-conf conf-3 [:CU :CU] "rotate cube up->down")]
+    #_(js/console.log moves)
+    #_(js/console.log corner-moves)
+    {:start-cube (get-in conf [:end-cube])
+     :end-cube (get-in conf-4 [:end-cube])
+     :description "Layer-1"
+     :child-confs [(last (get-in init-conf [:child-confs]))
+                   (last (get-in conf-2 [:child-confs]))
+                   (last (get-in conf-3 [:child-confs]))
+                   (last (get-in conf-4 [:child-confs]))]}))
+
+
+
+
+(defn layer-1'
   [conf]
   (let [init-conf (-> conf
                       white-cross-moves
@@ -410,6 +425,23 @@
 
 
 
+(defn cube-solver
+  [moves]
+  (let [variable-conf (cb/apply-moves-on-conf {:end-cube cb/solved
+                                               :start-cube cb/solved
+                                               :description "solved"}
+                                              moves
+                                              "variable cube")
+        layer-1-conf (layer-1 variable-conf)]
+    {:start-cube cb/solved
+     :end-cube (get-in layer-1-conf [:end-cube])
+     :description "ruwix cube solver"
+     :child-confs [(first (get-in variable-conf [:child-confs]))
+                   (last (get-in variable-conf [:child-confs]))
+                   layer-1-conf]}))
+
+
+
 
 
 (comment
@@ -417,9 +449,23 @@
                                                    :start-cube cb/solved
                                                    :description "solved"}
                                                   [:U :D :L :U' :R' :L]
-                                                  "variable cube"))]
-    (dfs-traversal req-tree)
-    (dfs-traversal (combine-nodes req-tree)))
+                                                  "variable cube"))
+        try-tree (white-cross-moves (cb/apply-moves-on-conf {:end-cube cb/solved
+                                                             :start-cube cb/solved
+                                                             :description "solved"}
+                                                            [:U :D :L :U' :R' :L]
+                                                            "variable cube"))
+        try-tree-2 (-> (cb/apply-moves-on-conf {:end-cube cb/solved
+                                                :start-cube cb/solved
+                                                :description "solved"}
+                                               [:U :D :L :U' :R' :L]
+                                               "variable cube")
+                       white-cross-moves
+                       (cb/apply-moves-on-conf [:CU] "rotate cube front->up"))
+        try-tree-3 (complete-white-corners try-tree-2)
+        final-tree (cube-solver [:U :D :L :U' :R' :L])]
+    (dfs-traversal final-tree)
+    )
   )
 
 
@@ -445,7 +491,31 @@
 
 
 
-(defn in-position-yellow
+;; (defn in-position-yellow
+;;   [conf]
+;;   (loop [ct 0
+;;          cb (get-in conf [:end-cube])
+;;          moves []]
+;;     (let [yellow-piece (get-in cb [:up 1 1])
+;;           left-yellow? (or (= (get-in cb [:front 1 0]) yellow-piece)
+;;                            (= (get-in cb [:left 1 2]) yellow-piece))
+;;           up-yellow? (or (= (get-in cb [:front 0 1]) yellow-piece)
+;;                          (= (get-in cb [:up 2 1]) yellow-piece))
+;;           n-moves (if left-yellow?
+;;                     (conj moves :CL)
+;;                     (if up-yellow?
+;;                       (into moves (conj adjust-left :CL))
+;;                       (conj moves :U)))]
+;;       (if (< ct 4)
+;;         (recur (if (= (last n-moves) :U)
+;;                  ct
+;;                  (inc ct))
+;;                {:start-cube }
+;;                n-moves)
+;;         moves))))
+
+
+(defn in-position-yellow'
   [cube]
   (loop [ct 0
          cb cube
