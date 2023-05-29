@@ -51,7 +51,7 @@
                                        {:end-cube rand-cube
                                         :start-cube rand-cube})))
         end-conf (mapv solve/layer-1 input-confs)]
-    (print (get-in end-conf [0 :start-cube]))
+    (println (get-in end-conf [0 :start-cube]))
     (testing "layer 1 is completely solved"
       (doseq
        [conf end-conf
@@ -66,3 +66,43 @@
         (is (= (get-in cb [:back 2]) [bc bc bc]))
         (is (= (get-in cb [:left 2]) [lc lc lc]))
         (is (= (get-in cb [:right 2]) [rc rc rc]))))))
+
+
+
+(deftest layer-2-al1-test []
+  (let [input-confs (repeatedly 1 (fn []
+                                    (let [rand-cube (generate-random-cube 20)]
+                                      {:end-cube rand-cube
+                                       :start-cube rand-cube})))
+        end-conf (mapv solve/cube-solver-l2-I input-confs)] 
+    (testing "layer 2 - I testing"
+      (doseq [conf end-conf
+              :let [cb (:end-cube conf)
+                    req-piece (get-in cb [:up 1 1])]]
+        (is (or (= (get-in cb [:front 1 0]) req-piece)
+                (= (get-in cb [:left 1 2]) req-piece)))
+        (is (or (= (get-in cb [:front 1 2]) req-piece)
+                (= (get-in cb [:right 1 0]) req-piece)))
+        (is (or (= (get-in cb [:left 1 0]) req-piece)
+                (= (get-in cb [:back 1 2]) req-piece)))
+        (is (or (= (get-in cb [:right 1 2]) req-piece)
+                (= (get-in cb [:left 1 0]) req-piece)))
+        (println cb)
+        ))))
+
+
+(deftest layer-2-test []
+  (let [input-confs (repeatedly 10 (fn []
+                                     (let [rand-cube (generate-random-cube 20)]
+                                       {:end-cube rand-cube
+                                        :start-cube rand-cube})))
+        end-conf (mapv solve/cube-solver-l2 input-confs)]
+    (testing "layer 2 testing"
+      (doseq [conf end-conf
+              :let [cb (:end-cube conf)
+                    ]]
+        (is (= (get-in cb [:front 1 0]) (get-in cb [:front 1 1]) (get-in cb [:front 1 2])))
+        (is (= (get-in cb [:right 1 0]) (get-in cb [:right 1 1]) (get-in cb [:right 1 2])))
+        (is (= (get-in cb [:left 1 0]) (get-in cb [:left 1 1]) (get-in cb [:left 1 2])))
+        (is (= (get-in cb [:back 1 0]) (get-in cb [:back 1 1]) (get-in cb [:back 1 2])))))
+    ))

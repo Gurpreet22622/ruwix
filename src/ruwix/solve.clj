@@ -21,6 +21,8 @@
             :moves []}]
           moves))
 
+(comment 
+  (get-resultant-cubes cb/solved [[:L :U'] [:U :L :D]]))
 
 
 ;; (defn generate-cube
@@ -516,27 +518,83 @@
 
 
 (defn in-position-yellow'
-  [cube]
+  [conf]
   (loop [ct 0
-         cb cube
-         moves []]
+         cb (:end-cube conf)
+         child-conf []]
     (let [yellow-piece (get-in cb [:up 1 1])
           left-yellow? (or (= (get-in cb [:front 1 0]) yellow-piece)
                            (= (get-in cb [:left 1 2]) yellow-piece))
           up-yellow? (or (= (get-in cb [:front 0 1]) yellow-piece)
                          (= (get-in cb [:up 2 1]) yellow-piece))
-          n-moves (if left-yellow?
-                    (conj moves :CL)
-                    (if up-yellow?
-                      (into moves (conj adjust-left :CL))
-                      (conj moves :U)))]
+          n-conf (if left-yellow?
+                   {:start-cube cb
+                    :end-cube (cb/apply-moves cb [:CL])
+                    :description "piece in left position, cube front->left"
+                    :moves [:CL]}
+                   (if up-yellow?
+                     {:start-cube cb
+                      :end-cube (cb/apply-moves cb (into [] (conj adjust-left :CL)))
+                      :description "piece is at upper position, adjusting it at left, cube front->left"
+                      :moves (into [] (conj adjust-left :CL))}
+                     {:start-cube cb
+                      :end-cube (cb/apply-moves cb [:U])
+                      :description "piece is not at upper position, adjusting it at top"
+                      :moves [:U]}
+                     ))]
       (if (< ct 4)
-        (recur (if (= (last n-moves) :U)
+        (recur (if (= (:moves n-conf) [:U])
                  ct
                  (inc ct))
-               (cb/apply-moves cube n-moves)
-               n-moves)
-        moves))))
+               (:end-cube n-conf)
+               (conj child-conf n-conf))
+        {:start-cube (:start-cube conf)
+         :end-cube (:end-cube (last child-conf))
+         :description (:description conf)
+         :child-confs (vec (flatten [(:child-confs conf)
+                                     {:start-cube (:end-cube conf)
+                                      :end-cube (:end-cube (last child-conf))
+                                      :description "Layer-2"
+                                      :child-confs [{:start-cube (:end-cube conf)
+                                                     :end-cube (:end-cube (last child-conf))
+                                                     :description "getting all yellow corner piece in position"
+                                                     :child-confs child-conf}]}]))}))))
+
+
+
+(comment
+  (let [req-tree (layer-1 (cb/apply-moves-on-conf {:end-cube cb/solved
+                                                   :start-cube cb/solved
+                                                   :description "solved"}
+                                                  [:U :D :L :U' :R' :L]
+                                                  "variable cube"))
+        try-tree (white-cross-moves (cb/apply-moves-on-conf {:end-cube cb/solved
+                                                             :start-cube cb/solved
+                                                             :description "solved"}
+                                                            [:U :D :L :U' :R' :L]
+                                                            "variable cube"))
+        try-tree-2 (-> (cb/apply-moves-on-conf {:end-cube cb/solved
+                                                :start-cube cb/solved
+                                                :description "solved"}
+                                               [:U :D :L :U' :R' :L]
+                                               "variable cube")
+                       white-cross-moves
+                       (cb/apply-moves-on-conf [:CU] "rotate cube front->up"))
+        try-tree-3 (complete-white-corners try-tree-2)
+        final-tree (cube-solver [:U :D :L :U' :R' :L])]
+    (dfs-traversal (in-position-yellow' final-tree)))
+  )
+
+
+
+
+(defn cube-solver-l2-I
+  [conf]
+  (let [layer-1-conf (layer-1 conf)]
+    (in-position-yellow' layer-1-conf)))
+
+(comment
+  (dfs-traversal (cube-solver-l2-I [:U :D :L :U' :R' :L])))
 
 
 (comment	 (def cb-test2 (reduce cb/apply-moves test-cube (layer-1' test-cube)))
@@ -580,6 +638,100 @@
           (recur (inc ct)
                  (cb/apply-moves cube new-moves)
                  new-moves))))))
+
+
+
+
+
+
+
+
+
+(defn layer-2'
+  [conf]
+  (loop [cb (:end-cube conf)
+         sub-confs []]
+
+    (let [front-piece (get-in cb [:front 1 1])
+          up-piece? (or (= (get-in cb [:front 0 1]) front-piece)
+                        (= (get-in cb [:left 0 1]) front-piece)
+                        (= (get-in cb [:right 0 1]) front-piece)
+                        (= (get-in cb [:back 0 1]) front-piece))
+          ready-to-move? (= (get-in cb [:front 0 1]) front-piece)
+          in-left? (= (get-in cb [:up 2 1]) (get-in cb [:left 1 1]))
+          in-conf? (and (= (get-in cb [:front 1 0]) (get-in cb [:front 1 1]) (get-in cb [:front 1 2]))
+                        (= (get-in cb [:right 1 0]) (get-in cb [:right 1 1]) (get-in cb [:right 1 2]))
+                        (= (get-in cb [:left 1 0]) (get-in cb [:left 1 1]) (get-in cb [:left 1 2]))
+                        (= (get-in cb [:back 1 0]) (get-in cb [:back 1 1]) (get-in cb [:back 1 2])))
+          n-conf (if up-piece?
+                   (if ready-to-move?
+                     (if in-left?
+                       {:start-cube cb
+                        :end-cube (cb/apply-moves cb adjust-left)
+                        :description "putting upper edge -> left  edge"
+                        :moves adjust-left}
+                       {:start-cube cb
+                        :end-cube (cb/apply-moves cb adjust-right)
+                        :description "putting upper edge -> right  edge"
+                        :moves adjust-right})
+                     {:start-cube cb
+                      :end-cube (cb/apply-moves cb [:U])
+                      :description "adjusting upper-most layer"
+                      :moves [:U]})
+                   {:start-cube cb
+                    :end-cube (cb/apply-moves cb [:CL])
+                    :description "move cube front->left"
+                    :moves [:CL]})]
+      (if in-conf?
+        {:start-cube (:start-cube conf)
+         :end-cube (:end-cube (last sub-confs))
+         :description (:description  conf)
+         :child-confs (vec (flatten [(vec (drop-last (:child-confs conf)))
+                                     {:start-cube (:end-cube conf)
+                                      :end-cube (:end-cube (last sub-confs))
+                                      :description "Layer-2"
+                                      :child-confs [(first (:child-confs (last (:child-confs conf))))
+                                                    {:start-cube (get-in (last (:child-confs conf)) [:end-cube])
+                                                     :end-cube (:end-cube (last sub-confs))
+                                                     :description "adjusting layer 2 edges"
+                                                     :child-confs sub-confs}]}]))}
+        (recur
+         (:end-cube n-conf)
+         (conj sub-confs n-conf))))))
+
+
+
+
+
+(comment
+  (:end-cube (layer-2' (in-position-yellow' (cube-solver [:U :D :L :U' :R' :L]))))
+  (let [try-conf (layer-2' (in-position-yellow' (cube-solver [:U :D :L :U' :R' :L])))]
+    (first (:child-confs (last (:child-confs try-conf)))))
+  )
+
+
+(defn cube-solver-l2
+  [conf]
+  (let [layer-1-conf (layer-1 conf)
+        mid-l2 (in-position-yellow' layer-1-conf)]
+    (layer-2' mid-l2)))
+
+(comment
+  (cube-solver-l2 {:end-cube {:front [[:d :f :b] [:d :b :d] [:d :e :a]], 
+                              :back [[:a :d :d] [:d :a :a] [:f :b :c]], 
+                              :right [[:c :e :c] [:a :c :e] [:e :b :a]], 
+                              :left [[:a :f :b] [:c :d :b] [:e :c :b]], 
+                              :up [[:e :f :f] [:a :f :a] [:e :b :f]], 
+                              :down [[:f :c :c] [:f :e :c] [:b :e :d]]},
+                   :start-cube {:front [[:d :f :b] [:d :b :d] [:d :e :a]], 
+                                :back [[:a :d :d] [:d :a :a] [:f :b :c]], 
+                                :right [[:c :e :c] [:a :c :e] [:e :b :a]], 
+                                :left [[:a :f :b] [:c :d :b] [:e :c :b]], 
+                                :up [[:e :f :f] [:a :f :a] [:e :b :f]], 
+                                :down [[:f :c :c] [:f :e :c] [:b :e :d]]}})
+  )
+
+
 
 
 
