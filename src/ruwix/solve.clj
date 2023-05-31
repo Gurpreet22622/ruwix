@@ -25,36 +25,37 @@
   (get-resultant-cubes cb/solved [[:L :U'] [:U :L :D]]))
 
 
-;; (defn generate-cube
-;;   [{:keys [front back up down left right]}]
-;;   (for [[face pos-x pos-y] [[left 170 0]
-;;                             [front 170 160]
-;;                             [right 170 320]
-;;                             [back 170 480]
-;;                             [up 10 160]
-;;                             [down 330 160]]
-;;         row                [0 1 2]
-;;         col                [0 1 2]
-;;         :let               [x (+ (* 50 row) (+ pos-x 10))
-;;                             y (+ (* 50 col) (+ pos-y 10))
-;;                             color (face->color (get-in face [row col]))]]
-;;     [:rect   {:x            y
-;;               :y            x
-;;               :width        50
-;;               :height       50
-;;               :fill         color
-;;               :stroke       "black"
-;;               :stroke-width 5
-;;               :rx           15
-;;               :ry           15}]))
 
-;; (defonce *current-conf (atom {:cube-moves (get-resultant-cubes cb/solved [])
-;;                               :current 0}))
+(defn generate-cube
+  [{:keys [front back up down left right]}]
+  (for [[face pos-x pos-y] [[left 170 0]
+                            [front 170 160]
+                            [right 170 320]
+                            [back 170 480]
+                            [up 10 160]
+                            [down 330 160]]
+        row                [0 1 2]
+        col                [0 1 2]
+        :let               [x (+ (* 50 row) (+ pos-x 10))
+                            y (+ (* 50 col) (+ pos-y 10))
+                            color (face->color (get-in face [row col]))]]
+    [:rect   {:x            y
+              :y            x
+              :width        50
+              :height       50
+              :fill         color
+              :stroke       "black"
+              :stroke-width 5
+              :rx           15
+              :ry           15}]))
 
-;; (defn web-cube
-;;   [current-cube]
-;;   (into [:svg {:width 800 :height 600}]
-;;         (generate-cube current-cube)))
+(defonce *current-conf (atom {:cube-moves (get-resultant-cubes cb/solved [])
+                              :current 0}))
+
+(defn web-cube
+  [current-cube]
+  (into [:svg {:width 800 :height 600}]
+        (generate-cube current-cube)))
 
 
 
@@ -443,6 +444,20 @@
                    layer-1-conf]}))
 
 
+(defn cube-solver'
+  [cube]
+  (let [variable-conf {:start-cube cb/solved
+                       :end-cube cube
+                       :description "variable cube"
+                       :moves "unknown"}
+        layer-1-conf (layer-1 variable-conf)]
+    {:start-cube cb/solved
+     :end-cube (get-in layer-1-conf [:end-cube])
+     :description "ruwix cube solver"
+     :child-confs [(first (get-in variable-conf [:child-confs]))
+                   (last (get-in variable-conf [:child-confs]))
+                   layer-1-conf]}))
+
 
 
 
@@ -519,7 +534,7 @@
 
 (defn in-position-yellow'
   [conf]
-  (loop [ct 0
+  (loop [
          cb (:end-cube conf)
          child-conf []]
     (let [yellow-piece (get-in cb [:up 1 1])
@@ -527,6 +542,14 @@
                            (= (get-in cb [:left 1 2]) yellow-piece))
           up-yellow? (or (= (get-in cb [:front 0 1]) yellow-piece)
                          (= (get-in cb [:up 2 1]) yellow-piece))
+          final? (and (or (= (get-in cb [:front 1 0]) yellow-piece)
+                          (= (get-in cb [:left 1 2]) yellow-piece))
+                      (or (= (get-in cb [:front 1 2]) yellow-piece)
+                          (= (get-in cb [:right 1 0]) yellow-piece))
+                      (or (= (get-in cb [:left 1 0]) yellow-piece)
+                          (= (get-in cb [:back 1 2]) yellow-piece))
+                      (or (= (get-in cb [:right 1 2]) yellow-piece)
+                          (= (get-in cb [:back 1 0]) yellow-piece)))
           n-conf (if left-yellow?
                    {:start-cube cb
                     :end-cube (cb/apply-moves cb [:CL])
@@ -542,23 +565,27 @@
                       :description "piece is not at upper position, adjusting it at top"
                       :moves [:U]}
                      ))]
-      (if (< ct 4)
-        (recur (if (= (:moves n-conf) [:U])
-                 ct
-                 (inc ct))
-               (:end-cube n-conf)
-               (conj child-conf n-conf))
+      (if final?
         {:start-cube (:start-cube conf)
-         :end-cube (:end-cube (last child-conf))
+         :end-cube (if (empty? child-conf)
+                     (:end-cube conf)
+                     (:end-cube (last child-conf)))
          :description (:description conf)
          :child-confs (vec (flatten [(:child-confs conf)
                                      {:start-cube (:end-cube conf)
-                                      :end-cube (:end-cube (last child-conf))
+                                      :end-cube (if (empty? child-conf)
+                                                  (:end-cube conf)
+                                                  (:end-cube (last child-conf)))
                                       :description "Layer-2"
                                       :child-confs [{:start-cube (:end-cube conf)
-                                                     :end-cube (:end-cube (last child-conf))
+                                                     :end-cube (if (empty? child-conf)
+                                                                 (:end-cube conf)
+                                                                 (:end-cube (last child-conf)))
                                                      :description "getting all yellow corner piece in position"
-                                                     :child-confs child-conf}]}]))}))))
+                                                     :child-confs child-conf}]}]))}
+        (recur 
+         (:end-cube n-conf)
+         (conj child-conf n-conf))))))
 
 
 
@@ -581,7 +608,12 @@
                        white-cross-moves
                        (cb/apply-moves-on-conf [:CU] "rotate cube front->up"))
         try-tree-3 (complete-white-corners try-tree-2)
-        final-tree (cube-solver [:U :D :L :U' :R' :L])]
+        final-tree (cube-solver' {:front [[:e :e :b] [:a :e :a] [:c :c :e]],
+                                  :back [[:d :d :f] [:b :f :c] [:b :a :a]],
+                                  :right [[:f :f :a] [:c :c :f] [:c :f :e]],
+                                  :left [[:b :c :d] [:e :d :d] [:d :e :a]],
+                                  :up [[:c :b :f] [:b :b :d] [:b :b :d]],
+                                  :down [[:f :f :a] [:d :a :a] [:e :e :c]]})]
     (dfs-traversal (in-position-yellow' final-tree)))
   )
 
@@ -647,55 +679,100 @@
 
 
 
+
 (defn layer-2'
   [conf]
-  (loop [cb (:end-cube conf)
+  (loop [ct 0
+         cb (:end-cube conf)
          sub-confs []]
 
     (let [front-piece (get-in cb [:front 1 1])
-          up-piece? (or (= (get-in cb [:front 0 1]) front-piece)
-                        (= (get-in cb [:left 0 1]) front-piece)
-                        (= (get-in cb [:right 0 1]) front-piece)
-                        (= (get-in cb [:back 0 1]) front-piece))
+          up-piece (get-in cb [:up 1 1])
+          up-piece? (or (and (= (get-in cb [:front 0 1]) front-piece)
+                             (not= (get-in cb [:up 2 1]) up-piece))
+                        (and (= (get-in cb [:left 0 1]) front-piece)
+                             (not= (get-in cb [:up 1 0]) up-piece))
+                        (and (= (get-in cb [:right 0 1]) front-piece)
+                             (not= (get-in cb [:up 1 2]) up-piece))
+                        (and (= (get-in cb [:back 0 1]) front-piece)
+                             (not= (get-in cb [:up 0 1]) up-piece)))
+          up-flipped? (or (and (= (get-in cb [:front 0 1]) (get-in cb [:left 1 1]))
+                               (= (get-in cb [:up 2 1]) (get-in cb [:front 1 1])))
+                          (and (= (get-in cb [:right 0 1]) (get-in cb [:left 1 1]))
+                               (= (get-in cb [:up 1 2]) (get-in cb [:front 1 1])))
+                          (and (= (get-in cb [:left 0 1]) (get-in cb [:left 1 1]))
+                               (= (get-in cb [:up 1 0]) (get-in cb [:front 1 1])))
+                          (and (= (get-in cb [:back 0 1]) (get-in cb [:left 1 1]))
+                               (= (get-in cb [:up 0 1]) (get-in cb [:front 1 1]))))
           ready-to-move? (= (get-in cb [:front 0 1]) front-piece)
+          moving-piece-valid (and (not= (get-in cb [:front 0 1]) up-piece)
+                                  (not= (get-in cb [:up 2 1]) up-piece))
           in-left? (= (get-in cb [:up 2 1]) (get-in cb [:left 1 1]))
+          flipping-left? (and (= (get-in cb [:front 1 1]) (get-in cb [:up 2 1]))
+                              (= (get-in cb [:left 1 1]) (get-in cb [:front 0 1])))
+          flipping-right? (and (= (get-in cb [:front 1 1]) (get-in cb [:up 2 1]))
+                               (= (get-in cb [:right 1 1]) (get-in cb [:front 0 1])))
           in-conf? (and (= (get-in cb [:front 1 0]) (get-in cb [:front 1 1]) (get-in cb [:front 1 2]))
                         (= (get-in cb [:right 1 0]) (get-in cb [:right 1 1]) (get-in cb [:right 1 2]))
                         (= (get-in cb [:left 1 0]) (get-in cb [:left 1 1]) (get-in cb [:left 1 2]))
                         (= (get-in cb [:back 1 0]) (get-in cb [:back 1 1]) (get-in cb [:back 1 2])))
           n-conf (if up-piece?
                    (if ready-to-move?
-                     (if in-left?
+                     (if (and in-left? moving-piece-valid)
                        {:start-cube cb
                         :end-cube (cb/apply-moves cb adjust-left)
                         :description "putting upper edge -> left  edge"
                         :moves adjust-left}
-                       {:start-cube cb
-                        :end-cube (cb/apply-moves cb adjust-right)
-                        :description "putting upper edge -> right  edge"
-                        :moves adjust-right})
+                       (if moving-piece-valid
+                         {:start-cube cb
+                          :end-cube (cb/apply-moves cb adjust-right)
+                          :description "putting upper edge -> right  edge"
+                          :moves adjust-right}
+                         {:start-cube cb
+                          :end-cube (cb/apply-moves cb [:U])
+                          :description "adjusting upper-most layer"
+                          :moves [:U]}))
                      {:start-cube cb
                       :end-cube (cb/apply-moves cb [:U])
                       :description "adjusting upper-most layer"
                       :moves [:U]})
-                   {:start-cube cb
-                    :end-cube (cb/apply-moves cb [:CL])
-                    :description "move cube front->left"
-                    :moves [:CL]})]
+                   (if up-flipped?
+                     (if (and flipping-left? moving-piece-valid)
+                       {:start-cube cb
+                        :end-cube (cb/apply-moves cb (vec (flatten (repeat 3 adjust-left))))
+                        :description "putting upper egde -> left edge with flipping"
+                        :moves (vec (flatten (repeat 3 adjust-left)))}
+                       (if (and flipping-right? moving-piece-valid)
+                         {:start-cube cb
+                          :end-cube (cb/apply-moves cb (vec (flatten (repeat 3 adjust-right))))
+                          :description "putting upper egde -> right edge with flipping"
+                          :moves (vec (flatten (repeat 3 adjust-right)))}
+                         {:start-cube cb
+                          :end-cube (cb/apply-moves cb [:U])
+                          :description "adjusting upper-most layer"
+                          :moves [:U]}))
+                     {:start-cube cb
+                      :end-cube (cb/apply-moves cb [:CL])
+                      :description "move cube front->left"
+                      :moves [:CL]}))
+          end-cube (if (empty? sub-confs)
+                     (:end-cube conf)
+                     (:end-cube (last sub-confs)))]
       (if in-conf?
         {:start-cube (:start-cube conf)
-         :end-cube (:end-cube (last sub-confs))
+         :end-cube end-cube
          :description (:description  conf)
          :child-confs (vec (flatten [(vec (drop-last (:child-confs conf)))
                                      {:start-cube (:end-cube conf)
-                                      :end-cube (:end-cube (last sub-confs))
+                                      :end-cube end-cube
                                       :description "Layer-2"
                                       :child-confs [(first (:child-confs (last (:child-confs conf))))
                                                     {:start-cube (get-in (last (:child-confs conf)) [:end-cube])
-                                                     :end-cube (:end-cube (last sub-confs))
+                                                     :end-cube end-cube
                                                      :description "adjusting layer 2 edges"
                                                      :child-confs sub-confs}]}]))}
         (recur
+         (inc ct)
          (:end-cube n-conf)
          (conj sub-confs n-conf))))))
 
@@ -704,31 +781,49 @@
 
 
 (comment
-  (:end-cube (layer-2' (in-position-yellow' (cube-solver [:U :D :L :U' :R' :L]))))
-  (let [try-conf (layer-2' (in-position-yellow' (cube-solver [:U :D :L :U' :R' :L])))]
-    (first (:child-confs (last (:child-confs try-conf)))))
+  
+  (let [try-conf (layer-2' (in-position-yellow' (cube-solver' {:front [[:f :e :e] [:b :a :c] [:c :f :c]]
+                                                               , :back [[:f :a :e] [:b :b :d] [:b :d :b]]
+                                                               , :right [[:c :c :c] [:e :d :d] [:a :d :d]]
+                                                               , :left [[:d :f :d] [:a :c :f] [:d :e :a]]
+                                                               , :up [[:a :c :b] [:a :f :b] [:a :b :b]]
+                                                               , :down [[:f :c :e] [:a :e :e] [:f :f :e]]})))]
+    try-conf)
   )
 
 
+
+
+
+(defonce p-conf (atom nil))
+
 (defn cube-solver-l2
   [conf]
-  (let [layer-1-conf (layer-1 conf)
-        mid-l2 (in-position-yellow' layer-1-conf)]
-    (layer-2' mid-l2)))
+  (try
+    (let [layer-1-conf (layer-1 conf)
+             mid-l2 (in-position-yellow' layer-1-conf)]
+         (layer-2' mid-l2))
+    (catch Exception _e
+           (do (reset! p-conf conf)
+               (throw _e))
+      )))
 
 (comment
-  (cube-solver-l2 {:end-cube {:front [[:d :f :b] [:d :b :d] [:d :e :a]], 
-                              :back [[:a :d :d] [:d :a :a] [:f :b :c]], 
-                              :right [[:c :e :c] [:a :c :e] [:e :b :a]], 
-                              :left [[:a :f :b] [:c :d :b] [:e :c :b]], 
-                              :up [[:e :f :f] [:a :f :a] [:e :b :f]], 
-                              :down [[:f :c :c] [:f :e :c] [:b :e :d]]},
-                   :start-cube {:front [[:d :f :b] [:d :b :d] [:d :e :a]], 
-                                :back [[:a :d :d] [:d :a :a] [:f :b :c]], 
-                                :right [[:c :e :c] [:a :c :e] [:e :b :a]], 
-                                :left [[:a :f :b] [:c :d :b] [:e :c :b]], 
-                                :up [[:e :f :f] [:a :f :a] [:e :b :f]], 
-                                :down [[:f :c :c] [:f :e :c] [:b :e :d]]}})
+  @p-conf
+  (cube-solver-l2 {:end-cube
+                   {:front [[:a :c :e] [:f :e :e] [:e :e :b]],
+                    :back [[:b :e :a] [:c :f :d] [:c :a :d]],
+                    :right [[:a :d :d] [:c :b :b] [:f :b :b]],
+                    :left [[:d :a :c] [:b :a :a] [:b :b :d]],
+                    :up [[:f :d :f] [:d :d :f] [:f :f :c]],
+                    :down [[:a :a :c] [:f :c :e] [:e :c :e]]},
+                   :start-cube
+                   {:front [[:a :c :e] [:f :e :e] [:e :e :b]],
+                    :back [[:b :e :a] [:c :f :d] [:c :a :d]],
+                    :right [[:a :d :d] [:c :b :b] [:f :b :b]],
+                    :left [[:d :a :c] [:b :a :a] [:b :b :d]],
+                    :up [[:f :d :f] [:d :d :f] [:f :f :c]],
+                    :down [[:a :a :c] [:f :c :e] [:e :c :e]]}})
   )
 
 
@@ -756,6 +851,72 @@
         new-move
         (recur (cb/apply-moves cube new-move)
                new-move)))))
+
+
+
+
+
+
+(defn seq-yellow-cross'
+  [conf]
+  (loop [cb (:end-cube conf)
+         sub-confs []]
+    (let [h-line? (= (get-in cb [:up 1 0]) (get-in cb [:up 1 1]) (get-in cb [:up 1 2]))
+          v-line? (= (get-in cb [:up 0 1]) (get-in cb [:up 1 1]) (get-in cb [:up 2 1]))
+          cross? (and v-line? h-line?)
+          new-conf (cond
+                     cross? sub-confs
+                     (and v-line? (not h-line?))  {:start-cube cb
+                                                   :end-cube (cb/apply-moves cb (into [:U] upper-yellow-cross))
+                                                   :description "making upper cross"
+                                                   :moves (into [:U] upper-yellow-cross)}
+                     :else                        {:start-cube cb
+                                                   :end-cube (cb/apply-moves cb (into upper-yellow-cross [:U]))
+                                                   :description "making upper cross"
+                                                   :moves (into upper-yellow-cross [:U])})
+          end-cube (if (empty? sub-confs)
+                     (:end-cube conf)
+                     (:end-cube (last sub-confs)))]
+      (if cross?
+        {:start-cube (:start-cube conf)
+         :end-cube end-cube
+         :description (:description conf)
+         :child-confs (vec (flatten [(:child-confs conf)
+                                     {:start-cube (:end-cube conf)
+                                      :end-cube end-cube
+                                      :description "Layer-3"
+                                      :child-confs [{:start-cube (:end-cube conf)
+                                                     :end-cube end-cube
+                                                     :description "sequencing upper cross"
+                                                     :child-confs sub-confs}]}]))}
+        (recur (:end-cube new-conf)
+               (conj sub-confs new-conf))))))
+
+
+
+
+
+(defn l3-solver-i
+  [conf]
+  (let [layer-1-conf (layer-1 conf)
+        mid-l2 (in-position-yellow' layer-1-conf)
+        l2 (layer-2' mid-l2)
+        l3-i (seq-yellow-cross' l2)]
+    l3-i))
+
+(comment
+  
+  (let [try-conf (layer-2' (in-position-yellow' (cube-solver [:U :D :L :U' :R' :L])))
+        l3-i-conf (seq-yellow-cross' try-conf)]
+    ;;(first (:child-confs (last (:child-confs try-conf))))
+    (:end-cube l3-i-conf))
+  )
+
+
+
+
+
+
 
 (comment (def cb-test5 (cb/apply-moves cb-test4 (seq-yellow-cross cb-test4))))
 

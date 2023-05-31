@@ -70,7 +70,7 @@
 
 
 (deftest layer-2-al1-test []
-  (let [input-confs (repeatedly 1 (fn []
+  (let [input-confs (repeatedly 10000 (fn []
                                     (let [rand-cube (generate-random-cube 20)]
                                       {:end-cube rand-cube
                                        :start-cube rand-cube})))
@@ -79,6 +79,9 @@
       (doseq [conf end-conf
               :let [cb (:end-cube conf)
                     req-piece (get-in cb [:up 1 1])]]
+        (when-not cb
+          (println (:start-cube conf)))
+        (is (some? cb))
         (is (or (= (get-in cb [:front 1 0]) req-piece)
                 (= (get-in cb [:left 1 2]) req-piece)))
         (is (or (= (get-in cb [:front 1 2]) req-piece)
@@ -86,23 +89,50 @@
         (is (or (= (get-in cb [:left 1 0]) req-piece)
                 (= (get-in cb [:back 1 2]) req-piece)))
         (is (or (= (get-in cb [:right 1 2]) req-piece)
-                (= (get-in cb [:left 1 0]) req-piece)))
-        (println cb)
+                (= (get-in cb [:back 1 0]) req-piece))) 
         ))))
 
 
 (deftest layer-2-test []
-  (let [input-confs (repeatedly 10 (fn []
-                                     (let [rand-cube (generate-random-cube 20)]
-                                       {:end-cube rand-cube
-                                        :start-cube rand-cube})))
-        end-conf (mapv solve/cube-solver-l2 input-confs)]
+  (let [input-confs (repeatedly 10000 (fn []
+                                       (let [rand-cube (generate-random-cube 20)]
+                                         {:end-cube rand-cube
+                                          :start-cube cb/solved})))
+        end-conf (mapv (fn [c]
+                         
+                         (solve/cube-solver-l2 c)) input-confs)]
+    
     (testing "layer 2 testing"
       (doseq [conf end-conf
               :let [cb (:end-cube conf)
                     ]]
+        (is (some? cb))
         (is (= (get-in cb [:front 1 0]) (get-in cb [:front 1 1]) (get-in cb [:front 1 2])))
         (is (= (get-in cb [:right 1 0]) (get-in cb [:right 1 1]) (get-in cb [:right 1 2])))
         (is (= (get-in cb [:left 1 0]) (get-in cb [:left 1 1]) (get-in cb [:left 1 2])))
         (is (= (get-in cb [:back 1 0]) (get-in cb [:back 1 1]) (get-in cb [:back 1 2])))))
     ))
+
+
+
+
+
+(deftest layer-3-i-test []
+  (let [input-confs (repeatedly 10000 (fn []
+                                        (let [rand-cube (generate-random-cube 20)]
+                                          {:end-cube rand-cube
+                                           :start-cube cb/solved})))
+        end-conf (mapv (fn [c]
+
+                         (solve/l3-solver-i c)) input-confs)]
+
+    (testing "layer 3 i testing"
+      (doseq [conf end-conf
+              :let [cb (:end-cube conf)
+                    up (get-in cb [:up 1 1])]]
+        (is (some? cb))
+        (is (= (get-in cb [:up 0 1]) up))
+        (is (= (get-in cb [:up 1 0]) up))
+        (is (= (get-in cb [:up 1 2]) up))
+        (is (= (get-in cb [:up 2 1]) up))
+        ))))
