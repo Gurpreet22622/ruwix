@@ -136,3 +136,92 @@
         (is (= (get-in cb [:up 1 2]) up))
         (is (= (get-in cb [:up 2 1]) up))
         ))))
+
+
+(deftest layer-3-ii-test []
+  (let [input-confs (repeatedly 100000 (fn []
+                                         (let [rand-cube (generate-random-cube 20)]
+                                           {:end-cube rand-cube
+                                            :start-cube cb/solved})))
+        end-conf (map (fn [c]
+
+                        (solve/l3-solver-ii c)) input-confs)]
+
+    (testing "layer 3 ii testing"
+      (doseq [conf end-conf
+              :let [cb (:end-cube conf)]]
+        (is (some? cb))
+        (is (= (get-in cb [:front 1 1]) (get-in cb [:front 0 1])))
+        (is (= (get-in cb [:left 1 1]) (get-in cb [:left 0 1])))
+        (is (= (get-in cb [:right 1 1]) (get-in cb [:right 0 1])))
+        (is (= (get-in cb [:back 1 1]) (get-in cb [:back 0 1])))
+        ))))
+
+
+
+
+
+(deftest layer-3-iii-test []
+  (let [input-confs (repeatedly 10000 (fn []
+                                         (let [rand-cube (generate-random-cube 20)]
+                                           {:end-cube rand-cube
+                                            :start-cube cb/solved})))
+        end-conf (map (fn [c]
+
+                        (solve/l3-solver-iii c)) input-confs)]
+
+    (testing "layer 3 iii testing"
+      (doseq [conf end-conf
+              :let [cb (:end-cube conf)
+                    corner-set-right? (or (and (= (get-in cb [:up 1 1]) (get-in cb [:up 2 2]))
+                                               (= (get-in cb [:front 1 1]) (get-in cb [:front 0 2]))
+                                               (= (get-in cb [:right 1 1]) (get-in cb [:right 0 0])))
+                                          (and (= (get-in cb [:up 1 1]) (get-in cb [:front 0 2]))
+                                               (= (get-in cb [:front 1 1]) (get-in cb [:right 0 0]))
+                                               (= (get-in cb [:right 1 1]) (get-in cb [:up 2 2])))
+                                          (and (= (get-in cb [:up 1 1]) (get-in cb [:right 0 0]))
+                                               (= (get-in cb [:front 1 1]) (get-in cb [:up 2 2]))
+                                               (= (get-in cb [:right 1 1]) (get-in cb [:front 0 2]))))
+                    corner-set-left? (or (and (= (get-in cb [:up 1 1]) (get-in cb [:up 2 0]))
+                                              (= (get-in cb [:front 1 1]) (get-in cb [:front 0 0]))
+                                              (= (get-in cb [:left 1 1]) (get-in cb [:left 0 2])))
+                                         (and (= (get-in cb [:up 1 1]) (get-in cb [:front 0 0]))
+                                              (= (get-in cb [:front 1 1]) (get-in cb [:left 0 2]))
+                                              (= (get-in cb [:left 1 1]) (get-in cb [:up 2 0])))
+                                         (and (= (get-in cb [:up 1 1]) (get-in cb [:left 0 2]))
+                                              (= (get-in cb [:front 1 1]) (get-in cb [:up 2 0]))
+                                              (= (get-in cb [:left 1 1]) (get-in cb [:front 0 0]))))]]
+        (is (some? cb))
+        (is corner-set-left?)
+        (is corner-set-right?)))))
+
+
+
+
+
+(deftest layer-3-complete-test []
+  (let [input-confs (repeatedly 100000 (fn []
+                                         (let [rand-cube (generate-random-cube 20)]
+                                           {:end-cube rand-cube
+                                            :start-cube cb/solved})))
+        end-conf (map-indexed (fn [i c]
+                                (when (zero? (mod i 1000))
+                                  (println "done: " i))
+                                (solve/l3-solver c)) input-confs)]
+
+    (testing "layer 3 complete testing"
+      (doseq [conf end-conf
+              :let [cb (:end-cube conf)
+                    f (get-in cb [:front 1 1])
+                    b (get-in cb [:back 1 1])
+                    l (get-in cb [:left 1 1])
+                    r (get-in cb [:right 1 1])
+                    u (get-in cb [:up 1 1])
+                    d (get-in cb [:down 1 1])]]
+        (is (some? cb))
+        (is (= (get-in cb [:front]) [[f f f] [f f f] [f f f]]))
+        (is (= (get-in cb [:back]) [[b b b] [b b b] [b b b]]))
+        (is (= (get-in cb [:left]) [[l l l] [l l l] [l l l]]))
+        (is (= (get-in cb [:right]) [[r r r] [r r r] [r r r]]))
+        (is (= (get-in cb [:up]) [[u u u] [u u u] [u u u]]))
+        (is (= (get-in cb [:down]) [[d d d] [d d d] [d d d]]))))))

@@ -12,5 +12,6 @@
           }
     ],
     "calva.paredit.killAlsoCutsToClipboard": true,
-    "calva.referencesCodeLens.enabled": true
+    "calva.referencesCodeLens.enabled": true,
+    "calva.evalOnSave": true
 }
