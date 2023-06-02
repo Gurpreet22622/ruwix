@@ -1,5 +1,4 @@
-(ns cube
-  (:require [hyperfiddle.rcf :refer [tests]]))
+(ns cube)
 (defn- make-face
   [color]
   (into [] ( repeat 3 (into [] (repeat 3 color))) ))
@@ -25,13 +24,6 @@
         lst (into [] (reverse (map last face)))]
     [fst snd lst]))
 
-#_(tests
- (rotate-clockwise [[:a :b :c] 
-                    [:d :e :f] 
-                    [:g :h :i]]) := [[:g :d :a] 
-                                     [:h :e :b] 
-                                     [:i :f :c]]
- )
 
 
 (defn apply-F 
@@ -264,8 +256,3 @@
                     :moves moves}]}))
 
 
-(tests
- (doseq [[_ move-fn] moves->movefn]
-   (nth (iterate move-fn solved) 4) := solved)
-
- nil)

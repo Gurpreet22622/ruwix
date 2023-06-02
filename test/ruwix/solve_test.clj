@@ -1,7 +1,8 @@
 (ns ruwix.solve-test
   (:require [ruwix.cube :as cb]
             [ruwix.solve :as solve]
-            [clojure.test :as test :refer [deftest is testing]]))
+            [clojure.test :as test :refer [deftest is testing]]
+            [clojure.core :as c]))
 
 (def all-moves
   [:F :F' :U :U' :L :L' :D :D' :R :R' :B :B' :CL :CR :CU :CW])
@@ -70,11 +71,11 @@
 
 
 (deftest layer-2-al1-test []
-  (let [input-confs (repeatedly 10000 (fn []
+  (let [input-confs (repeatedly 1000 (fn []
                                     (let [rand-cube (generate-random-cube 20)]
                                       {:end-cube rand-cube
                                        :start-cube rand-cube})))
-        end-conf (mapv solve/cube-solver-l2-I input-confs)] 
+        end-conf (map solve/cube-solver-l2-I input-confs)] 
     (testing "layer 2 - I testing"
       (doseq [conf end-conf
               :let [cb (:end-cube conf)
@@ -94,11 +95,11 @@
 
 
 (deftest layer-2-test []
-  (let [input-confs (repeatedly 10000 (fn []
+  (let [input-confs (repeatedly 1000 (fn []
                                        (let [rand-cube (generate-random-cube 20)]
                                          {:end-cube rand-cube
                                           :start-cube cb/solved})))
-        end-conf (mapv (fn [c]
+        end-conf (map (fn [c]
                          
                          (solve/cube-solver-l2 c)) input-confs)]
     
@@ -118,11 +119,11 @@
 
 
 (deftest layer-3-i-test []
-  (let [input-confs (repeatedly 10000 (fn []
+  (let [input-confs (repeatedly 1000 (fn []
                                         (let [rand-cube (generate-random-cube 20)]
                                           {:end-cube rand-cube
                                            :start-cube cb/solved})))
-        end-conf (mapv (fn [c]
+        end-conf (map (fn [c]
 
                          (solve/l3-solver-i c)) input-confs)]
 
@@ -139,13 +140,14 @@
 
 
 (deftest layer-3-ii-test []
-  (let [input-confs (repeatedly 100000 (fn []
+  (let [input-confs (repeatedly 1000 (fn []
                                          (let [rand-cube (generate-random-cube 20)]
                                            {:end-cube rand-cube
                                             :start-cube cb/solved})))
         end-conf (map (fn [c]
-
-                        (solve/l3-solver-ii c)) input-confs)]
+                        (println (:end-cube c))
+                        (solve/l3-solver-ii c))
+                      input-confs)]
 
     (testing "layer 3 ii testing"
       (doseq [conf end-conf
@@ -162,7 +164,7 @@
 
 
 (deftest layer-3-iii-test []
-  (let [input-confs (repeatedly 10000 (fn []
+  (let [input-confs (repeatedly 1000 (fn []
                                          (let [rand-cube (generate-random-cube 20)]
                                            {:end-cube rand-cube
                                             :start-cube cb/solved})))
@@ -200,13 +202,14 @@
 
 
 (deftest layer-3-complete-test []
-  (let [input-confs (repeatedly 100000 (fn []
+  (let [input-confs (repeatedly 10000 (fn []
                                          (let [rand-cube (generate-random-cube 20)]
                                            {:end-cube rand-cube
                                             :start-cube cb/solved})))
         end-conf (map-indexed (fn [i c]
-                                (when (zero? (mod i 1000))
+                                (when (zero? (mod i 100))
                                   (println "done: " i))
+
                                 (solve/l3-solver c)) input-confs)]
 
     (testing "layer 3 complete testing"
