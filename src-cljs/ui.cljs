@@ -60,7 +60,7 @@
                        (swap! *current inc)
                        #_(js/console.log @*current))
            :disabled last?} "next>>"]
-         [:h2 "List of moves"]
+         [:H2 "List of moves"]
          #_(js/console.log cube-moves)
          [:ul
           (doall (map-indexed (fn [idx {:keys [moves]}]
@@ -132,12 +132,120 @@
    [display-conf tree depth (not= @*depth-level depth)]))
 
 
+(def *final-moves (r/atom []))
 
-(defn main
+
+
+(defn move-box 
+  []
+  (let [*inp-mvs (r/atom [])]
+    (fn []
+      [:div
+       [:p [:span {:style {:color "green"}} "Input box"]]
+       [:input {:type "button"
+                :value "F"
+                :on-click (fn []
+                            (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:F])))))}]
+       [:input {:type "button"
+                :value "F'"
+                :on-click (fn []
+                            (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:F'])))))}]
+       [:p " "]
+       [:input {:type "button"
+                :value "U"
+                :on-click (fn []
+                            (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:U])))))}]
+       [:input {:type "button"
+                :value "U'"
+                :on-click (fn []
+                            (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:U'])))))}]
+       [:p " "]
+       [:input {:type "button"
+                :value "L"
+                :on-click (fn []
+                            (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:L])))))}]
+       [:input {:type "button"
+                :value "L'"
+                :on-click (fn []
+                            (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:L'])))))}]
+       [:p " "]
+       [:input {:type "button"
+                :value "R"
+                :on-click (fn []
+                            (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:R])))))}]
+       [:input {:type "button"
+                :value "R'"
+                :on-click (fn []
+                            (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:R'])))))}]
+       [:p " "]
+       [:input {:type "button"
+                :value "B"
+                :on-click (fn []
+                            (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:B])))))}]
+       [:input {:type "button"
+                :value "B'"
+                :on-click (fn []
+                            (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:B'])))))}]
+       [:p " "]
+       [:input {:type "button"
+                :value "D"
+                :on-click (fn []
+                            (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:D])))))}]
+       [:input {:type "button"
+                :value "D'"
+                :on-click (fn []
+                            (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:D'])))))}]
+       [:p " "]
+       [:p " "]
+       (if (empty? @*inp-mvs)
+         [:p "Moves Buffer: Empty"]
+         [:p "Moves Buffer: " (solve/vec-to-str @*inp-mvs) "."])
+       (if (empty? @*final-moves)
+         [:p "Moves Applied: Nil"]
+         [:p "Moved Applied: " (solve/vec-to-str @*final-moves) "."])
+       [:input {:type "button"
+                :value "Submit"
+                :on-click (fn []
+                            (reset! *final-moves (vec (flatten (conj [] @*inp-mvs)))))}]
+       [:input {:type "button"
+                :value "Clear"
+                :on-click (fn []
+                            (reset! *final-moves [])
+                            (reset! *inp-mvs []))}]
+       [:input {:type "button"
+                :value "clear recent"
+                :on-click (fn []
+
+                            (reset! *inp-mvs (vec (drop-last @*inp-mvs))))}]
+       [:p " "]
+       [:p " "]
+       #_(js/console.log @*inp-mvs)])))
+
+
+
+
+
+
+
+(defn main'
   []
   (let [final-tree (solve/l3-solver (solve/cube-solver-moves [:U :D :L :U' :R' :L]))]
     [:div
-     [:p "CUBE SOLVER"]
+     [:P "CUBE SOLVER"]
+     [counting-component (max-depth final-tree)]
+     [dfs-traversal-web' final-tree]
+     (when @*current-conf
+       [web-cube (:end-cube @*current-conf)])]))
+
+
+
+(defn main
+  []
+  (let [final-tree (solve/l3-solver (solve/cube-solver-moves @*final-moves))]
+    [:div
+     [:p [:span {:style {:color "red"}} "Cube Solver"]]
+     [move-box]
+     #_(js/console.log @*final-moves)
      [counting-component (max-depth final-tree)]
      [dfs-traversal-web' final-tree]
      (when @*current-conf
