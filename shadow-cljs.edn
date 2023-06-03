@@ -1,7 +1,7 @@
 {:builds
  {:app {:asset-path "/js"
         :modules {:main {:entries [ui]}}
-        :output-dir "target/public/js"
+        :output-dir "resources/public/js"
         :target :browser
         :compiler-options {:preloads [devtools.preload]}}}
  :dependencies [[reagent "0.10.0"]
