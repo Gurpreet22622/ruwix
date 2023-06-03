@@ -1,0 +1,8 @@
+[build]
+publish = "resources/public"
+command = "npm run netlify"
+
+[[plugins]]
+package = "netlify-plugin-cache"
+  [plugins.inputs]
+  paths = ["jdk"]
