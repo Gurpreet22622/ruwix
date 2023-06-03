@@ -19,3 +19,4 @@ output.calva-repl
 /.clerk
 /node_modules
 /.shadow-cljs
+/resources/public/js

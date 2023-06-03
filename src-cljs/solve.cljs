@@ -1,7 +1,6 @@
 (ns solve
   (:require [clojure.string :as str]
-            [cube :as cb]
-            ))
+            [cube :as cb]))
 
 (def face->color
   {:a "green"
@@ -256,13 +255,18 @@
         conf-4 (cb/apply-moves-on-conf conf-3 [:CU :CU] "rotate cube up->down")]
     #_(js/console.log moves)
     #_(js/console.log corner-moves)
-    {:start-cube (get-in conf [:end-cube])
-     :end-cube (get-in conf-4 [:end-cube])
-     :description "Layer-1"
-     :child-confs [(last (get-in init-conf [:child-confs]))
-                   (last (get-in conf-2 [:child-confs]))
-                   (last (get-in conf-3 [:child-confs]))
-                   (last (get-in conf-4 [:child-confs]))]}))
+    {:start-cube (:start-cube conf)
+     :end-cube (:end-cube conf-4)
+     :description (:description conf)
+     :child-confs (conj
+                   (:child-confs conf)
+                   {:start-cube (get-in conf [:end-cube])
+                    :end-cube (get-in conf-4 [:end-cube])
+                    :description "Layer-1"
+                    :child-confs [(last (get-in init-conf [:child-confs]))
+                                  (last (get-in conf-2 [:child-confs]))
+                                  (last (get-in conf-3 [:child-confs]))
+                                  (last (get-in conf-4 [:child-confs]))]})}))
 
 
 
@@ -290,14 +294,12 @@
                                                :start-cube cb/solved
                                                :description "solved"}
                                               moves
-                                              "variable cube")
-        layer-1-conf (layer-1 variable-conf)]
+                                              "variable cube")]
     {:start-cube cb/solved
-     :end-cube (get-in layer-1-conf [:end-cube])
+     :end-cube (:end-cube variable-conf)
      :description "ruwix cube solver"
      :child-confs [(first (get-in variable-conf [:child-confs]))
-                   (last (get-in variable-conf [:child-confs]))
-                   layer-1-conf]}))
+                   (last (get-in variable-conf [:child-confs]))]}))
 
 
 (defn cube-solver-cube
@@ -488,18 +490,6 @@
 
 
 
-
-(defonce p-conf (atom nil))
-
-;; (defn cube-solver-l2
-;;   [conf]
-;;   (try
-;;     (let [layer-1-conf (layer-1 conf)
-;;           mid-l2 (in-position-yellow layer-1-conf)]
-;;       (layer-2 mid-l2))
-;;     (catch Exception _e
-;;       (do (reset! p-conf conf)
-;;           (throw _e)))))
 
 
 
@@ -793,6 +783,17 @@
         l3-iii (move-yellow-corners l3-ii)
         l3-final (layer-3 l3-iii)]
     l3-final))
+
+
+(comment
+
+
+
+  (let [try-conf (l3-solver (cube-solver-moves [:U :D :L :D :L' :R :U :R' :L]))]
+    ;;(first (:child-confs (last (:child-confs try-conf))))
+    (dfs-traversal try-conf)))
+
+
 
 
 

@@ -1,6 +1,6 @@
 {:builds
  {:app {:asset-path "/js"
-        :modules {:main {:entries [solve]}}
+        :modules {:main {:entries [ui]}}
         :output-dir "target/public/js"
         :target :browser
         :compiler-options {:preloads [devtools.preload]}}}
