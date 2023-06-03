@@ -15,6 +15,7 @@
         "react-dom": "16.13.0"
     },
     "devDependencies": {
+        "netlify-plugin-cache": "^1.0.3",
         "shadow-cljs": "^2.23.3"
     }
 }
