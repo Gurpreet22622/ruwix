@@ -93,11 +93,12 @@
 
 (defn max-depth
   [tree]
-  (let [child-depth (if (:child-confs tree)
-                      (map max-depth (:child-confs tree))
+  (let [child-depth (if (seq (:child-confs tree))
+                      (mapv max-depth (:child-confs tree))
                       [-1])
         n-depth (inc (apply max child-depth))]
     n-depth))
+
 
 
 
@@ -116,8 +117,8 @@
          (when-let [moves (:moves conf)]
            moves))]
    (when show-children?
-     (for [child (get-in conf [:child-confs])]
-       ^{:key (get-in child [:description])}
+     (for [[idx child] (map-indexed vector (get-in conf [:child-confs]))]
+       ^{:key idx}
        [:li
 
 
@@ -241,12 +242,13 @@
 
 (defn main
   []
-  (let [final-tree (solve/l3-solver (solve/cube-solver-moves @*final-moves))]
+  (let [final-tree (solve/l3-solver (solve/cube-solver-moves @*final-moves))
+        depth (max-depth final-tree)]
     [:div
      [:p [:span {:style {:color "red"}} "Cube Solver"]]
      [move-box]
-     #_(js/console.log @*final-moves)
-     [counting-component (max-depth final-tree)]
+     (js/console.log "the depth is: "depth)
+     [counting-component depth] 
      [dfs-traversal-web' final-tree]
      (when @*current-conf
        [web-cube (:end-cube @*current-conf)])]))
