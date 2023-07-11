@@ -1,7 +1,8 @@
 (ns ui
   (:require   [solve :as solve]
               [reagent.core :as r]
-              [reagent.dom :as rdom]))
+              [reagent.dom :as rdom]
+              [cube :as cb]))
 
 
 
@@ -34,10 +35,9 @@
 
 (defn web-cube
   [current-cube]
-  (into [:svg {:width 800 :height 600}]
+  (into [:svg
+         {:viewBox "0 0 700 600"}]
         (generate-cube current-cube)))
-
-
 
 (defn display-cube-moves
   [cube-moves]
@@ -64,7 +64,7 @@
          #_(js/console.log cube-moves)
          [:ul
           (doall (map-indexed (fn [idx {:keys [moves]}]
-                                ^{:key idx} [:li [:input {:type "button"
+                                ^{:key idx} [:li [:button {:class "btn btn-outline-primary btn-lg me-md-4 col-1"
                                                           :value (solve/vec-to-str moves)
                                                           :on-click #(reset! *current idx)}]])
                               cube-moves))]]))))
@@ -79,16 +79,18 @@
   [:div
    "The tree is at height "
    @*depth-level ". "
-   [:input {:type "button"
-            :value "Increase"
+   [:button {:class "btn btn-outline-secondary btn-lg me-md-5 col-2"
+            
             :on-click (if (= @*depth-level limit)
                         #()
-                        #(swap! *depth-level inc))}]
-   [:input {:type "button"
-            :value "Decrease"
+                        #(swap! *depth-level inc))}
+    "Increase"]
+   [:button {:class "btn btn-outline-secondary btn-lg me-md-5 col-2"
+            
             :on-click (if (= @*depth-level 0)
                         #()
-                        #(swap! *depth-level dec))}]])
+                        #(swap! *depth-level dec))}
+    "Decrease"]])
 
 
 (defn max-depth
@@ -135,108 +137,145 @@
 
 (def *final-moves (r/atom []))
 
-
+(def *inp-mvs (r/atom []))
 
 (defn move-box 
   []
-  (let [*inp-mvs (r/atom [])]
-    (fn []
-      [:div
-       [:p [:span {:style {:color "green"}} "Input box"]]
-       [:input {:type "button"
-                :value "F"
-                :on-click (fn []
-                            (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:F])))))}]
-       [:input {:type "button"
-                :value "F'"
-                :on-click (fn []
-                            (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:F'])))))}]
-       [:p " "]
-       [:input {:type "button"
-                :value "U"
-                :on-click (fn []
-                            (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:U])))))}]
-       [:input {:type "button"
-                :value "U'"
-                :on-click (fn []
-                            (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:U'])))))}]
-       [:p " "]
-       [:input {:type "button"
-                :value "L"
-                :on-click (fn []
-                            (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:L])))))}]
-       [:input {:type "button"
-                :value "L'"
-                :on-click (fn []
-                            (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:L'])))))}]
-       [:p " "]
-       [:input {:type "button"
-                :value "R"
-                :on-click (fn []
-                            (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:R])))))}]
-       [:input {:type "button"
-                :value "R'"
-                :on-click (fn []
-                            (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:R'])))))}]
-       [:p " "]
-       [:input {:type "button"
-                :value "B"
-                :on-click (fn []
-                            (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:B])))))}]
-       [:input {:type "button"
-                :value "B'"
-                :on-click (fn []
-                            (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:B'])))))}]
-       [:p " "]
-       [:input {:type "button"
-                :value "D"
-                :on-click (fn []
-                            (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:D])))))}]
-       [:input {:type "button"
-                :value "D'"
-                :on-click (fn []
-                            (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:D'])))))}]
-       [:p " "]
-       [:p " "]
-       (if (empty? @*inp-mvs)
-         [:p "Moves Buffer: Empty"]
-         [:p "Moves Buffer: " (solve/vec-to-str @*inp-mvs) "."])
-       (if (empty? @*final-moves)
-         [:p "Moves Applied: Nil"]
-         [:p "Moved Applied: " (solve/vec-to-str @*final-moves) "."])
-       [:input {:type "button"
-                :value "Submit"
-                :on-click (fn []
-                            (reset! *final-moves (vec (flatten (conj [] @*inp-mvs)))))}]
-       [:input {:type "button"
-                :value "Clear"
-                :on-click (fn []
-                            (reset! *final-moves [])
-                            (reset! *inp-mvs []))}]
-       [:input {:type "button"
-                :value "clear recent"
-                :on-click (fn []
-
-                            (reset! *inp-mvs (vec (drop-last @*inp-mvs))))}]
-       [:p " "]
-       [:p " "]
-       #_(js/console.log @*inp-mvs)])))
-
-
-
-
-
-
-
-(defn main'
-  []
-  (let [final-tree (solve/l3-solver (solve/cube-solver-moves [:U :D :L :U' :R' :L]))]
+  (fn []
     [:div
-     [:P "CUBE SOLVER"]
-     [counting-component (max-depth final-tree)]
-     [dfs-traversal-web' final-tree]
-     (when @*current-conf
-       [web-cube (:end-cube @*current-conf)])]))
+     [:p {:class "fs-4 fst-italic"} [:span {:style {:color "green"}} "Input box"]]
+
+     [:button {
+               :class "btn btn-outline-primary btn-lg me-md-4 col-1 "
+               
+               :on-click (fn []
+                           (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:F])))))}
+      "F"]
+     [:button {:class "btn btn-outline-primary btn-lg me-md-4 col-1"
+
+               :on-click (fn []
+                           (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:R])))))}
+      "R"]
+     
+     [:button {:class "btn btn-outline-primary btn-lg me-md-4 col-1"
+               
+               :on-click (fn []
+                           (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:U])))))}
+      "U"]
+     
+     [:button {:class "btn btn-outline-primary btn-lg me-md-4 col-1"
+
+               :on-click (fn []
+                           (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:B])))))}
+      "B"]
+     
+     [:button {:class "btn btn-outline-primary btn-lg me-md-4 col-1"
+               
+               :on-click (fn []
+                           (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:L])))))}
+      "L"]
+     [:button {:class "btn btn-outline-primary btn-lg me-md-4 col-1"
+
+               :on-click (fn []
+                           (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:D])))))}
+      "D"]
+     [:p " "]
+     [:button {:class "btn btn-outline-primary btn-lg me-md-4 col-1"
+
+               :on-click (fn []
+                           (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:F'])))))}
+      "F'"]
+     
+     [:button {:class "btn btn-outline-primary btn-lg me-md-4 col-1"
+               
+               :on-click (fn []
+                           (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:R'])))))}
+      "R'"]
+     
+     [:button {:class "btn btn-outline-primary btn-lg me-md-4 col-1"
+
+               :on-click (fn []
+                           (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:U'])))))}
+      "U'"]
+     
+     
+     [:button {:class "btn btn-outline-primary btn-lg me-md-4 col-1"
+               
+               :on-click (fn []
+                           (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:B'])))))}
+      "B'"]
+     
+     [:button {:class "btn btn-outline-primary btn-lg me-md-4 col-1"
+
+               :on-click (fn []
+                           (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:L'])))))}
+      "L'"]
+     
+     [:button {:class "btn btn-outline-primary btn-lg me-md-4 col-1"
+               
+               :on-click (fn []
+                           (reset! *inp-mvs (vec (flatten (conj @*inp-mvs [:D'])))))}
+      "D'"]
+     [:p " "]
+     [:p " "]
+     (if (empty? @*inp-mvs)
+       [:p "Moves Buffer: " [:span {:style {:color "orange"}} "Empty"]]
+       [:p "Moves Buffer: " [:span {:style {:color "orange"}} (solve/vec-to-str @*inp-mvs)] "."])
+     (if (empty? @*final-moves)
+       [:p "Moves Applied: " [:span {:style {:color "orange"}} "NIL"]]
+       [:p "Moved Applied: " [:span {:style {:color "orange"}} (solve/vec-to-str @*final-moves) "."]])
+     [:button {:class "btn btn-success btn-lg me-md-4"
+               :on-click (fn []
+                           (reset! *final-moves (vec (flatten (conj [] @*inp-mvs)))))}
+      "Submit"]
+     [:button {:class "btn btn-danger btn-lg me-md-4"
+               :on-click (fn []
+                           (reset! *final-moves [])
+                           (reset! *inp-mvs []))}
+      "Clear"]
+     [:button {:class "btn btn-warning btn-lg"
+               :on-click (fn []
+                           (reset! *inp-mvs (vec (drop-last @*inp-mvs))))}
+      "Clear recent"]
+     [:p " "]
+     [:p " "]
+     #_(js/console.log @*inp-mvs)]))
+
+
+
+
+
+(defn dropdown
+  []
+  [:div {:class "form-floating"}
+   [:select {:class "form-select"
+                          ;;:id "floatingSelect"
+                          ;;:arial-label "Floating label select example" 
+             :on-change (fn [e]
+                          
+                          (case (.-value (.-target e))
+                            "Peak 1" (reset! *final-moves [:U :B :B :F :F :D' :R :L :U' :R :L :D :B' :F' :U' :R :L :B :F])
+                            "Peak 2" (reset! *final-moves [:U' :L :L :D' :B :B :D :L :L :U' :L' :B' :D :U' :R' :B' :U :F :D :F :F :R' :U])
+                            "Peak 3" (reset! *final-moves [:U' :R :R :D :B :B :R :R :D :R :R :U' :L' :F :F :L :F :R :B' :D' :L :R :R :U])
+                            "Peak 4" (reset! *final-moves [:U :L :L :U :R :R :B :R' :B :B :L :L :F :D' :B' :L :U :U :L :B :R' :U :B' :U :U])
+                            "Peak 5" (reset! *final-moves [:B :B :F :F :U :B :B :F :F :L :L :R :R :U' :L :L :R :F :L' :F' :R :B :R' :F :D :U'])
+                            "Peak 6" (reset! *final-moves [:L :L :D' :F :D :F' :R :R :D' :U' :F' :L :R :B :D :D :L' :D' :L :U])
+                            "Stripped 1" (reset! *final-moves [:D' :F :D' :L :B :D :D :F :F :U :R :B' :U :R :R :F :D' :R :F :U :U])
+                            "Stripped 2" (reset! *final-moves [:L :U :B :B :L :L :D :D :B :U :B' :D' :R' :B' :F' :U :U :B :B :U :R])
+                            "Two rings" (reset! *final-moves [:F :F :D' :R :R :D' :L' :U' :L' :R :B :D' :U :B :L :F :F :L :U :U])
+                            "open this menu to select designed cubes" (reset! *final-moves [])))}
+    [:option  "open this menu to select designed cubes"]
+    [:option  "Peak 1"]
+    [:option  "Peak 2"]
+    [:option  "Peak 3"]
+    [:option  "Peak 4"]
+    [:option  "Peak 5"]
+    [:option  "Peak 6"]
+    [:option  "Stripped 1"]
+    [:option  "Stripped 2"]
+    [:option  "Two rings"]]
+   [:label {:for "floatingSelect"}
+    "variable cubes!"]])
 
 
 
@@ -245,13 +284,32 @@
   (let [final-tree (solve/l3-solver (solve/cube-solver-moves @*final-moves))
         depth (max-depth final-tree)]
     [:div
-     [:p [:span {:style {:color "red"}} "Cube Solver"]]
-     [move-box]
-     (js/console.log "the depth is: "depth)
-     [counting-component depth] 
-     [dfs-traversal-web' final-tree]
-     (when @*current-conf
-       [web-cube (:end-cube @*current-conf)])]))
+     [:p {:class "text-center fw-bold fs-1"} [:span {:style {:color "red"}} "Cube Solver"]]
+     [:div {:class "row"}
+      [:div {:class "col-sm-7"}
+
+       [move-box]
+
+       [counting-component depth]
+       [dfs-traversal-web' final-tree]]
+      [:div {:class "col-sm"}
+       (if (and (empty? @*final-moves) (not-empty @*inp-mvs))
+         [web-cube (cb/apply-moves cb/solved @*inp-mvs)]
+         (if @*current-conf
+           [web-cube (:end-cube @*current-conf)]
+           [web-cube (get-in (second (get-in final-tree [:child-confs])) [:end-cube])]))
+
+       [dropdown]]]
+     [:div {:class "text-center p-4", :style {:background-color "rgba (0, 0, 0, 0.05)"}}
+      [:hr]
+      "© 2023 | Gurpreet Singh"
+      [:p ""]
+      [:p "v 1.0.0"]
+      [:a {:href "https://github.com/Gurpreet22622/ruwix"
+           :target "blank"} [:img {:src "./img/github-logo.png"
+                                   :width "20"
+                                   :height "20"}]]]]))
+
 
 (defn start []
   (rdom/render [main] (js/document.getElementById "app")))
