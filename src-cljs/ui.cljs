@@ -291,7 +291,11 @@
        [move-box]
 
        [counting-component depth]
-       [dfs-traversal-web' final-tree]]
+       [:div.container
+        [:div.section {:style {:height "200px"
+                               :overflow "auto"
+                               }}
+         [dfs-traversal-web' final-tree]]]]
       [:div {:class "col-sm"}
        (if (and (empty? @*final-moves) (not-empty @*inp-mvs))
          [web-cube (cb/apply-moves cb/solved @*inp-mvs)]
